@@ -1,0 +1,34 @@
+/* Harbor Stories — base styles */
+:root {
+  --hs-bg: #10141c;
+  --hs-panel: #1a2130;
+  --hs-panel-soft: #232b3d;
+  --hs-text: #f5efe6;
+  --hs-muted: #9aa7bd;
+  --hs-accent: #ffb84d;
+  --hs-danger: #e05a4e;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; height: 100%; }
+
+body {
+  background: var(--hs-bg);
+  color: var(--hs-text);
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+}
+
+.hs-app { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+
+.hs-title-screen { text-align: center; padding: 48px 24px; }
+.hs-title-name { font-size: 56px; font-weight: 700; letter-spacing: 1px; margin-bottom: 16px; color: var(--hs-accent); }
+.hs-tagline { font-size: 18px; color: var(--hs-muted); max-width: 42em; line-height: 1.5; margin-bottom: 32px; }
+
+.hs-btn {
+  display: inline-block; padding: 10px 26px; border-radius: 999px; border: none; cursor: pointer;
+  background: var(--hs-accent); color: #241a08; font-size: 17px; font-weight: 600; margin-top: 10px;
+}
+.hs-btn:hover { filter: brightness(1.08); }
+
+.hs-noscript { text-align: center; padding: 24px; color: var(--hs-muted); }

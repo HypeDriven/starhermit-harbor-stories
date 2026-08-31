@@ -1,0 +1,74 @@
+[
+  {
+    "name": "ui-start",
+    "seconds": 1,
+    "prompt": "Short bright tap on a wooden dock plank with a soft small brass bell chirp, friendly game-start confirmation for a seaside harbor puzzle game.",
+    "event": "ui-start"
+  },
+  {
+    "name": "tool-move",
+    "seconds": 1,
+    "prompt": "Light wooden slide and soft knock of a small hand tool being dragged one cell across a rough dock plank, dry and quiet.",
+    "event": "move"
+  },
+  {
+    "name": "tool-merge",
+    "seconds": 1,
+    "prompt": "Two small wooden tools clack together followed by a bright pitched-up metallic clink sparkle, a satisfying merge upgrade in a puzzle game.",
+    "event": "merge"
+  },
+  {
+    "name": "deliver",
+    "seconds": 1,
+    "prompt": "Coiled rope thump onto a wooden crate with a small brass bell ding, a package being delivered at a harbor market stall.",
+    "event": "deliver"
+  },
+  {
+    "name": "task-complete",
+    "seconds": 2,
+    "prompt": "Cheerful small harbor bell rung twice with a warm wooden creak, a commission completed fanfare, cozy and rewarding.",
+    "event": "task-complete"
+  },
+  {
+    "name": "tide-spawn",
+    "seconds": 1,
+    "prompt": "Gentle water splash with a soft wooden plop as the tide drops fresh supplies onto a dock, light and playful.",
+    "event": "spawn"
+  },
+  {
+    "name": "round-advance",
+    "seconds": 2,
+    "prompt": "Distant ship horn swell followed by a single seagull cry over calm harbor water, a new round beginning.",
+    "event": "round"
+  },
+  {
+    "name": "tasks-new",
+    "seconds": 1,
+    "prompt": "Paper note flutter and a pin tapping into a wooden notice board, a new task list being posted at a harbor.",
+    "event": "tasks-new"
+  },
+  {
+    "name": "win",
+    "seconds": 3,
+    "prompt": "Joyful harbor bells pealing with seagull cries and a warm small brass fanfare, a cozy seaside victory celebration.",
+    "event": "win"
+  },
+  {
+    "name": "lose",
+    "seconds": 2,
+    "prompt": "Low foghorn moan with a sad wooden hull creak and fading water lapping, a gentle non-punishing defeat.",
+    "event": "lose"
+  },
+  {
+    "name": "invalid-move",
+    "seconds": 1,
+    "prompt": "Dull muted wooden thunk with a short rubbery bounce, a rejected action error sound, soft and not harsh.",
+    "event": "invalid"
+  },
+  {
+    "name": "resign",
+    "seconds": 2,
+    "prompt": "Soft descending boatswain whistle with a rope being lowered and a quiet water splash, calmly giving up a round.",
+    "event": "resign"
+  }
+]
