@@ -1,117 +1,129 @@
-/* Harbor Stories — browser entry point. */
+/* Harbor Stories — responsive browser entry point. */
 (function () {
 'use strict';
 
-var THREE = window.THREE;
 var Rules = window.HSRules;
 var Content = window.HSContent;
+var state = null;
+var selected = null;
+var startedAt = 0;
+var statusText = '';
 
-// ---------- constants ----------
-var CELL = 1.0;          // world units per board cell (square)
-var ITEM_RADIUS = 0.42;
-var CAM_DIST = 9.5;      // camera distance from board center
-var CAM_HEIGHT = 3.6;    // camera height above board plane
+function app() { return document.getElementById('app'); }
+function loc(r, c) { return { r: r, c: c }; }
+function same(a, b) { return a && b && a.r === b.r && a.c === b.c; }
+function itemAt(p) { return state && state.board[p.r][p.c]; }
+function itemName(item) { return item ? Content.itemLabel(item.c, item.t) : 'Open water'; }
+function icon(item) { return item ? Content.CHAINS[item.c].icon : '·'; }
 
-// ---------- module state ----------
-var scene, camera, renderer, clock;
-var boardGroup, itemMeshes = [], cellMeshes = [];
-var taskPanelEl, hudScoreEl, hudMovesEl, msgEl;
-var selectedCell = -1;   // r*cols+c or -1
-var gameCfg = null;      // rules cfg object (has .board rows/cols)
-var gameState = null;    // rules state
-var threeReady = false;
-
-function boardDims() { return { rows: gameCfg.board.rows, cols: gameCfg.board.cols }; }
-
-// ---------- 3D scene setup ----------
-function initThree() {
-  if (threeReady) return;
-  try {
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio || 1);
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(45, 8 / 3, 0.1, 200);
-    clock = new THREE.Clock();
-
-    var amb = new THREE.AmbientLight(0xffffff, 0.7);
-    scene.add(amb);
-    var dir = new THREE.DirectionalLight(0xfff4e0, 0.9);
-    dir.position.set(-6, 12, -8);
-    scene.add(dir);
-
-    // board plane (water)
-    var waterGeo = new THREE.PlaneGeometry(CAM_DIST * 3, CAM_DIST * 3);
-    var waterMat = new THREE.MeshBasicMaterial({ color: 0x1d4e7a });
-    var waterMesh = new THREE.Mesh(waterGeo, waterMat);
-    waterMesh.rotation.x = -Math.PI / 2;
-    scene.add(waterMesh);
-
-    // cells (wooden dock)
-    for (var r = 0; r < gameCfg.board.rows; r++) {
-      var rowArr = [];
-      for (var c = 0; c < gameCfg.board.cols; c++) {
-        var g = new THREE.BoxGeometry(CELL, CELL * 0.5, CELL);
-        var m = new THREE.MeshLambertMaterial({ color: 0x8a6a3f });
-        rowArr.push(new THREE.Mesh(g, m));
-      }
-      cellMeshes[r] = rowArr;
-    }
-
-    // items (tools) — spheres colored by chain
-    var itemGeo = new THREE.SphereGeometry(ITEM_RADIUS, 24, 16);
-    for (var r2 = 0; r2 < gameCfg.board.rows; r2++) {
-      var rowArr2 = [];
-      for (var c2 = 0; c2 < gameCfg.board.cols; c2++) {
-        var m2 = new THREE.MeshLambertMaterial({ color: 0xffffff });
-        rowArr2.push(new THREE.Mesh(itemGeo, m2));
-      }
-      itemMeshes[r2] = rowArres(r2);
-    }
-
-    // position everything on the board (origin-centered)
-    var dims = boardDims();
-    for (var rr = 0; rr < dims.rows; rr++) {
-      for (var cc = 0; cc < dims.cols; cc++) {
-        var x = cc - (dims.cols - 1) / 2, z = rr - (dims.rows - 1) / 2;
-        cellMeshes[rr][cc].position.set(x, 0.5, z);
-        itemMeshes[rr][cc].position.set(x, 1.0, z);
-      }
-    }
-
-    camera.position.set(0, CAM_HEIGHT, CAM_DIST);
-    threeReady = true;
-  } catch (e) {
-    window.console && console.error('three init failed', e);
-    throw e;
-  }
-}
-
-function itemMeshesRow(r) { return itemMeshes[r]; }
-function rowArres(r) { var a=[]; for(var i=0;i<gameCfg.board.cols;i++)a.push(null); return a; }
-
-// ---------- DOM / UI ----------
-function initDOM() {
-  document.getElementById('app').innerHTML =
-    '<div class="hs-app">' +
-      '<h1 class="hs-title-name">Harbor Stories</h1>' +
-      '<p class="hs-tagline">A narrative merge puzzle. Merge tool chains, repair the coast, and reveal short story scenes.</p>' +
-      '<button id="btn-start" class="hs-btn">Play</button>' +
-    '</div>';
-
-  var btn = document.getElementById('btn-start');
-  if (btn) {
-    btn.addEventListener('click', function () { startGame(); });
-  }
+function showTitle() {
+  app().innerHTML = '<main class="hs-app"><section class="hs-title-screen">' +
+    '<h1 class="hs-title-name">Harbor Stories</h1>' +
+    '<p class="hs-tagline">Merge tool chains, repair the coast, and reveal stories around Brinemist Quay.</p>' +
+    '<button id="btn-start" class="hs-btn" type="button">Play</button></section></main>';
+  document.getElementById('btn-start').addEventListener('click', startGame);
 }
 
 function startGame() {
-  // User gesture: unlock the audio context and confirm with the start sound.
   if (window.HSSfx) { window.HSSfx.unlock(); window.HSSfx.uiStart(); }
-  initThree();
-  // TODO: build full game UI and loop here.
+  state = Rules.createGame(Content.JOURNEY[0]);
+  selected = null;
+  startedAt = performance.now();
+  statusText = Content.JOURNEY[0].intro || 'Select a tool, then an open or matching adjacent cell.';
+  renderGame();
 }
 
-// ---------- boot ----------
-initDOM();
+function apply(command) {
+  command.atMs = performance.now() - startedAt;
+  var result = Rules.applyCommand(state, command);
+  if (!result.ok) {
+    statusText = String(result.reason || 'That action is not available.').replace(/-/g, ' ');
+    if (window.HSSfx) window.HSSfx.invalid();
+    return false;
+  }
+  state = result.state;
+  result.events.forEach(function (event) {
+    if (window.HSSfx && typeof window.HSSfx[event.type] === 'function') window.HSSfx[event.type]();
+  });
+  var latest = result.events[result.events.length - 1];
+  statusText = latest ? latest.type.replace(/-/g, ' ') : 'Move complete';
+  selected = null;
+  return true;
+}
 
+function chooseCell(r, c) {
+  if (state.terminal) return;
+  var target = loc(r, c);
+  var item = itemAt(target);
+  if (!selected) {
+    if (!item) { statusText = 'Choose a tool first.'; renderGame(); return; }
+    selected = target;
+    statusText = itemName(item) + ' selected. Choose its destination or Deliver.';
+    renderGame();
+    return;
+  }
+  if (same(selected, target)) {
+    selected = null;
+    statusText = 'Selection cleared.';
+    renderGame();
+    return;
+  }
+  apply({ type: item ? 'merge' : 'move', from: selected, to: target });
+  renderGame();
+}
+
+function deliver() {
+  if (!selected) { statusText = 'Select a requested tool before delivering.'; renderGame(); return; }
+  apply({ type: 'deliver', at: selected });
+  renderGame();
+}
+
+function showHint() {
+  var h = Rules.hint(state);
+  if (!h) statusText = 'No legal action is available.';
+  else if (h.type === 'deliver') statusText = 'Hint: deliver ' + itemName(h.item) + '.';
+  else statusText = 'Hint: ' + h.type + ' from row ' + (h.from.r + 1) + ', column ' + (h.from.c + 1) +
+    ' to row ' + (h.to.r + 1) + ', column ' + (h.to.c + 1) + '.';
+  renderGame();
+}
+
+function renderTasks() {
+  return state.tasks.map(function (task) {
+    var reqs = task.reqs.map(function (req, i) {
+      return Content.itemLabel(req.chain, req.tier) + ' ' + task.got[i] + '/' + req.count;
+    }).join(' · ');
+    return '<li class="' + (task.done ? 'done' : '') + '"><strong>' + task.label + '</strong><span>' + reqs + '</span></li>';
+  }).join('');
+}
+
+function renderGame() {
+  var cfg = state.cfg;
+  var cells = '';
+  for (var r = 0; r < cfg.board.rows; r++) for (var c = 0; c < cfg.board.cols; c++) {
+    var item = state.board[r][c];
+    var isSelected = same(selected, loc(r, c));
+    cells += '<button class="hs-cell' + (item ? ' occupied' : '') + (isSelected ? ' selected' : '') +
+      '" data-r="' + r + '" data-c="' + c + '" type="button" aria-pressed="' + isSelected +
+      '" aria-label="Row ' + (r + 1) + ', column ' + (c + 1) + ': ' + itemName(item) + '">' +
+      '<span class="hs-icon" aria-hidden="true">' + icon(item) + '</span><span>' + itemName(item) + '</span></button>';
+  }
+  var terminal = state.terminal ? '<div class="hs-terminal" role="dialog"><h2>' +
+    (state.terminal.won ? 'Harbor restored!' : 'Round over') + '</h2><p>Score ' + state.score.total + '</p>' +
+    '<button id="btn-again" class="hs-btn" type="button">Play again</button></div>' : '';
+  app().innerHTML = '<main class="hs-game"><header><div><h1>Harbor Stories</h1><p>First Light Repairs</p></div>' +
+    '<div class="hs-score">Moves <b>' + state.moves + '</b> · Score <b>' + state.score.total + '</b></div></header>' +
+    '<section class="hs-layout"><aside><h2>Restoration tasks</h2><ul class="hs-tasks">' + renderTasks() + '</ul>' +
+    '<div class="hs-actions"><button id="btn-deliver" class="hs-btn" type="button">Deliver selected</button>' +
+    '<button id="btn-hint" class="hs-btn secondary" type="button">Hint</button></div></aside>' +
+    '<section class="hs-board-wrap"><p id="hs-status" class="hs-status" role="status">' + statusText + '</p>' +
+    '<div class="hs-board" style="--cols:' + cfg.board.cols + '">' + cells + '</div></section></section>' + terminal + '</main>';
+  app().querySelectorAll('.hs-cell').forEach(function (button) {
+    button.addEventListener('click', function () { chooseCell(Number(button.dataset.r), Number(button.dataset.c)); });
+  });
+  document.getElementById('btn-deliver').addEventListener('click', deliver);
+  document.getElementById('btn-hint').addEventListener('click', showHint);
+  var again = document.getElementById('btn-again'); if (again) again.addEventListener('click', startGame);
+}
+
+showTitle();
 })();
