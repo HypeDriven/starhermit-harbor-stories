@@ -32,6 +32,8 @@ body {
 .hs-btn:hover { filter: brightness(1.08); }
 
 .hs-noscript { text-align: center; padding: 24px; color: var(--hs-muted); }
+.hs-best { color: var(--hs-muted); font-size: 15px; margin-bottom: 8px; }
+.hs-btn kbd { font: inherit; font-size: .82em; opacity: .7; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; margin-left: 6px; }
 
 .hs-game { min-height: 100dvh; padding: clamp(12px, 2vw, 28px); max-width: 1280px; margin: 0 auto; }
 .hs-game > header { display: flex; gap: 16px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
@@ -67,4 +69,5 @@ body {
   .hs-layout > aside { order: 2; }
   .hs-cell { border-radius: 8px; }
   .hs-cell > span:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .hs-btn kbd { display: none; }
 }

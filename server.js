@@ -1,10 +1,10 @@
-'use strict';
+// ES module: package.json declares "type": "module".
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
-
-const ROOT = __dirname;
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 8080;
 
 const MIME = {
@@ -20,17 +20,36 @@ const MIME = {
 };
 
 const server = http.createServer((req, res) => {
-  let urlPath = req.url || '/';
-  if (urlPath.length > 1 && urlPath.charAt(urlPath.length - 1) === '/') urlPath += '';
-  const p = decodeURIComponent(urlPath.split('?')[0]);
+  const urlPath = req.url || '/';
+
+  // Malformed percent-escapes must not throw out of the request handler.
+  let p;
+  try {
+    p = decodeURIComponent(urlPath.split('?')[0]);
+  } catch (e) {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Bad Request');
+    return;
+  }
 
   // '/' -> index.html; otherwise serve the file directly.
   let filePath;
   if (p === '/index' || p === '/') {
     filePath = path.join(ROOT, 'index.html');
+  } else if (p === '/favicon.ico') {
+    filePath = path.join(ROOT, 'favicon.svg');
   } else {
     filePath = path.join(ROOT, p);
   }
+
+  // Never serve anything outside the game directory ('..' traversal).
+  const resolved = path.resolve(filePath);
+  if (resolved !== ROOT && !resolved.startsWith(ROOT + path.sep)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Forbidden');
+    return;
+  }
+  filePath = resolved;
 
   fs.stat(filePath, (err, st) => {
     if (!err && st.isFile()) {
@@ -49,4 +68,4 @@ server.listen(PORT, () => {
   console.log('Harbor Stories server listening on http://localhost:' + PORT);
 });
 
-module.exports = server;
+export default server;

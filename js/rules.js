@@ -36,6 +36,7 @@
 
   var INVALID = {
     EMPTY_SOURCE: 'empty-source',
+    EMPTY_TARGET: 'empty-target',
     OCCUPIED: 'occupied-target',
     SAME_CELL: 'same-cell',
     NOT_ADJACENT: 'not-adjacent',
@@ -225,7 +226,7 @@
     }
     // merge
     var dst = getCell(state, cmd.to);
-    if (!dst) return INVALID.OCCUPIED;
+    if (!dst) return INVALID.EMPTY_TARGET;
     if (!adjacent(cmd.from, cmd.to)) return INVALID.NOT_ADJACENT;
     if (src.c !== dst.c || src.t !== dst.t) return INVALID.MISMATCH;
     if (src.t >= (state.cfg.maxTier || 3)) return INVALID.MAX_TIER;
@@ -381,7 +382,9 @@
     }
 
     s.rngState = rng.state;
-    if (s.terminal) finalizeScore(s);
+    // Keep score.total live after every action, not only at game end, so the
+    // running score shown while playing matches the component totals.
+    finalizeScore(s);
     return { ok: true, state: s, events: s.events };
   }
 
