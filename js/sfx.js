@@ -25,8 +25,15 @@ var EVENTS = {
   'win':           { sample: 'win',           synth: synthWin },
   'lose':          { sample: 'lose',          synth: synthLose },
   'invalid':       { sample: 'invalid-move',  synth: synthInvalid },
-  'resign':        { sample: 'resign',        synth: synthResign }
+  'resign':        { sample: 'resign',        synth: synthResign },
+  'select':        { sample: 'tool-select',   synth: synthSelect },
+  'hint':          { sample: 'hint-gull',     synth: synthHint }
 };
+
+// Looped ambience bed (sfx/harbor-ambience.opus): quiet water and gulls under
+// the one-shots. Sits on its own gain node under the effects bus so mute and
+// volume apply to it; a missing or undecodable clip simply means silence.
+var AMBIENCE = { sample: 'harbor-ambience', gain: 0.32 };
 
 // ---------- module state ----------
 var ctx = null;        // AudioContext, created on unlock()
@@ -36,6 +43,7 @@ var muted = false;
 var buffers = {};      // sample name -> AudioBuffer | null (failed)
 var pending = {};      // sample name -> in-flight decode Promise
 var lastPlayed = {};   // event name -> ctx.currentTime of last start
+var ambience = null;   // { src: AudioBufferSourceNode, gain: GainNode } while looping
 
 try {
   var saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || 'null');
@@ -66,6 +74,32 @@ function unlock() {
     applyBusGain();
   }
   if (ctx.state === 'suspended') ctx.resume();
+  startAmbience();
+}
+
+function startAmbience() {
+  if (!ctx || ambience) return;
+  var buf = buffers[AMBIENCE.sample];
+  if (buf === undefined) {
+    if (!pending[AMBIENCE.sample]) loadSample(AMBIENCE.sample);
+    pending[AMBIENCE.sample] && pending[AMBIENCE.sample].then(startAmbience);
+    return;
+  }
+  if (!buf) return; // failed to load: no bed, no error
+  var g = ctx.createGain();
+  g.gain.value = AMBIENCE.gain;
+  var src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  src.connect(g).connect(bus);
+  src.start();
+  ambience = { src: src, gain: g };
+}
+
+function stopAmbience() {
+  if (!ambience) return;
+  try { ambience.src.stop(); } catch (e) { /* already stopped */ }
+  ambience = null;
 }
 
 // ---------- sample loading: lazy fetch/decode/cache ----------
@@ -81,6 +115,7 @@ function loadSample(name) {
     .then(function (buf) { buffers[name] = buf; })
     .catch(function () { buffers[name] = null; })
     .then(function () { delete pending[name]; });
+  return pending[name];
 }
 
 // ---------- playback ----------
@@ -113,7 +148,10 @@ var api = {
   setMuted: function (m) { muted = !!m; applyBusGain(); persist(); },
   toggleMute: function () { api.setMuted(!muted); return muted; },
   isMuted: function () { return muted; },
-  getVolume: function () { return volume; }
+  getVolume: function () { return volume; },
+  stopAmbience: stopAmbience,
+  startAmbience: startAmbience,
+  ambiencePlaying: function () { return !!ambience; }
 };
 Object.keys(EVENTS).forEach(function (event) {
   var method = event.replace(/-([a-z])/g, function (_, ch) { return ch.toUpperCase(); });
@@ -204,6 +242,14 @@ function synthInvalid() {
 function synthResign() {
   tone({ freq: 700, slide: 350, dur: 0.5, type: 'sine', gain: 0.1 });
   knock(0.5, 0.12, 800);
+}
+function synthSelect() {
+  knock(0, 0.14, 1500);
+  tone({ freq: 520, slide: 640, dur: 0.09, type: 'triangle', gain: 0.07, at: 0.02 });
+}
+function synthHint() {
+  tone({ freq: 1568, dur: 0.1, type: 'sine', gain: 0.09 });
+  tone({ freq: 2093, dur: 0.22, type: 'sine', gain: 0.08, at: 0.1 });
 }
 
 })();

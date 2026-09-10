@@ -16,3 +16,6 @@ Generated with MOSS-SoundEffect v2.0, 48 kHz mono Opus (96 kbps VBR, loudness-no
 | lose.opus | lose | Low foghorn moan with a sad wooden hull creak and fading water lapping, a gentle non-punishing defeat. |
 | invalid-move.opus | invalid | Dull muted wooden thunk with a short rubbery bounce, a rejected action error sound, soft and not harsh. |
 | resign.opus | resign | Soft descending boatswain whistle with a rope being lowered and a quiet water splash, calmly giving up a round. |
+| tool-select.opus | select | A single small hand tool being picked up off a rough wooden dock plank, a light dry wood scrape and a soft leather-glove grip, short, quiet and close-miked. |
+| hint-gull.opus | hint | One short friendly seagull chirp followed by a tiny bright glass wind-chime ting, a helpful nudge cue in a cozy seaside puzzle game. |
+| harbor-ambience.opus | ambience | Calm harbor water lapping gently against wooden pilings, a soft mooring rope creak and two distant seagulls, continuous quiet seaside dock ambience at golden hour, no music. |

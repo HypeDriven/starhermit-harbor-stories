@@ -70,5 +70,23 @@
     "seconds": 2,
     "prompt": "Soft descending boatswain whistle with a rope being lowered and a quiet water splash, calmly giving up a round.",
     "event": "resign"
+  },
+  {
+    "name": "tool-select",
+    "seconds": 1,
+    "prompt": "A single small hand tool being picked up off a rough wooden dock plank, a light dry wood scrape and a soft leather-glove grip, short, quiet and close-miked.",
+    "event": "select"
+  },
+  {
+    "name": "hint-gull",
+    "seconds": 1,
+    "prompt": "One short friendly seagull chirp followed by a tiny bright glass wind-chime ting, a helpful nudge cue in a cozy seaside puzzle game.",
+    "event": "hint"
+  },
+  {
+    "name": "harbor-ambience",
+    "seconds": 12,
+    "prompt": "Calm harbor water lapping gently against wooden pilings, a soft mooring rope creak and two distant seagulls, continuous quiet seaside dock ambience at golden hour, no music.",
+    "event": "ambience"
   }
 ]

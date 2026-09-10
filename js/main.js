@@ -32,6 +32,8 @@ function recordBest(score) {
 function showTitle() {
   var best = bestScore();
   app().innerHTML = '<main class="hs-app"><section class="hs-title-screen">' +
+    '<img class="hs-key-art" src="assets/key-art.webp" alt="" aria-hidden="true" decoding="async" ' +
+    'onerror="this.hidden=true">' +
     '<h1 class="hs-title-name">Harbor Stories</h1>' +
     '<p class="hs-tagline">Merge tool chains, repair the coast, and reveal stories around Brinemist Quay.</p>' +
     (best ? '<p class="hs-best">Best score <b>' + best + '</b></p>' : '') +
@@ -96,7 +98,7 @@ function apply(command) {
   }
   state = result.state;
   result.events.forEach(function (event) {
-    if (window.HSSfx && typeof window.HSSfx[event.type] === 'function') window.HSSfx[event.type]();
+    if (window.HSSfx) window.HSSfx.play(event.type);
   });
   statusText = statusFromEvents(result.events);
   selected = null;
@@ -111,6 +113,7 @@ function chooseCell(r, c) {
   if (!selected) {
     if (!item) { statusText = 'Choose a tool first.'; renderGame(); return; }
     selected = target;
+    if (window.HSSfx) window.HSSfx.select();
     statusText = itemName(item) + ' selected. Choose its destination or Deliver.';
     renderGame();
     return;
@@ -135,6 +138,7 @@ function deliver() {
 function showHint() {
   if (state.terminal) return;
   var h = Rules.hint(state);
+  if (window.HSSfx) window.HSSfx.hint();
   if (!h) statusText = 'No legal action is available.';
   else if (h.type === 'deliver') statusText = 'Hint: deliver ' + itemName(h.item) + '.';
   else statusText = 'Hint: ' + h.type + ' from row ' + (h.from.r + 1) + ', column ' + (h.from.c + 1) +
@@ -188,10 +192,13 @@ function renderGame() {
   }
   var best = bestScore();
   var terminal = state.terminal ? '<div class="hs-terminal" role="dialog" aria-modal="true" aria-labelledby="hs-terminal-title">' +
+    '<div class="hs-terminal-card">' +
+    '<img class="hs-result-art" src="assets/' + (state.terminal.won ? 'harbor-restored' : 'harbor-jammed') +
+    '.webp" alt="" aria-hidden="true" decoding="async" onerror="this.hidden=true">' +
     '<h2 id="hs-terminal-title">' + (state.terminal.won ? 'Harbor restored!' : 'Round over') + '</h2>' +
     '<p>Score ' + state.score.total + '</p>' +
     (best ? '<div class="hs-best">Best ' + best + '</div>' : '') +
-    '<button id="btn-again" class="hs-btn" type="button">Play again</button></div>' : '';
+    '<button id="btn-again" class="hs-btn" type="button">Play again</button></div></div>' : '';
   var muted = window.HSSfx ? window.HSSfx.isMuted() : true;
   app().innerHTML = '<main class="hs-game"><header><div><h1>Harbor Stories</h1><p>' + (cfg.name || '') + '</p></div>' +
     '<div class="hs-score">Moves <b>' + state.moves + '</b> · Score <b>' + state.score.total + '</b></div></header>' +
