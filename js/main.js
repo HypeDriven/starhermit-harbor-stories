@@ -312,7 +312,7 @@ function renderGame() {
     cells += '<button class="hs-cell' + (item ? ' occupied' : '') + (isSelected ? ' selected' : '') +
       '" data-r="' + r + '" data-c="' + c + '" type="button" aria-pressed="' + isSelected +
       '" aria-label="Row ' + (r + 1) + ', column ' + (c + 1) + ': ' + itemName(item) + '">' +
-      '<span class="hs-icon" aria-hidden="true">' + icon(item) + '</span><span>' + itemName(item) + '</span></button>';
+      '<span class="hs-icon" aria-hidden="true">' + icon(item) + (item ? '<b class="hs-tier" aria-hidden="true">' + (item.t + 1) + '</b>' : '') + '</span><span>' + itemName(item) + '</span></button>';
   }
   var best = bestScore();
   var terminal = state.terminal ? '<div class="hs-terminal" role="dialog" aria-modal="true" aria-labelledby="hs-terminal-title">' +
@@ -334,7 +334,7 @@ function renderGame() {
     '<button id="btn-sound" class="hs-btn secondary" type="button" aria-pressed="' + (!muted) + '">Sound: ' +
     (muted ? 'off' : 'on') + '</button></div></aside>' +
     '<section class="hs-board-wrap"><p id="hs-status" class="hs-status" role="status">' + statusText + '</p>' +
-    '<div class="hs-board" style="--cols:' + cfg.board.cols + '">' + cells + '</div></section></section>' + terminal + '</main>';
+    '<div class="hs-board" style="--cols:' + cfg.board.cols + ';--rows:' + cfg.board.rows + '">' + cells + '</div></section></section>' + terminal + '</main>';
   app().querySelectorAll('.hs-cell').forEach(function (button) {
     button.addEventListener('click', function () { chooseCell(Number(button.dataset.r), Number(button.dataset.c)); });
   });

@@ -70,7 +70,12 @@ body {
 .hs-cell.occupied { color: var(--hs-text); background: #253248; }
 .hs-cell.selected { border-color: var(--hs-accent); box-shadow: 0 0 0 2px rgba(255,184,77,.25); }
 .hs-cell:focus-visible, .hs-btn:focus-visible { outline: 3px solid white; outline-offset: 2px; }
-.hs-icon { font-size: clamp(20px, 3.4vw, 38px); line-height: 1; }
+.hs-icon { font-size: clamp(20px, 3.4vw, 38px); line-height: 1; position: relative; }
+/* tier badge: the persistent tier distinction, visible even when names are hidden */
+.hs-tier { position: absolute; right: -0.35em; bottom: -0.25em; font: 700 11px/1 system-ui, sans-serif; color: #111a29; background: var(--hs-accent); border-radius: 999px; padding: 2px 5px; min-width: 1em; text-align: center; }
+.hs-cell { position: relative; }
+/* the board fits the viewport height so tasks/actions and the lowest rows stay co-visible */
+.hs-board { width: min(100%, calc((100dvh - 210px) * var(--cols, 6) / var(--rows, 6))); margin: 0 auto; }
 .hs-terminal { position: fixed; inset: 0; background: rgba(8,12,20,.9); display: grid; place-items: center; text-align: center; z-index: 5; padding: 16px; overflow: auto; }
 .hs-terminal-card { width: min(92vw, 520px); padding: 16px 20px 20px; border-radius: 18px; background: var(--hs-panel); box-shadow: 0 24px 64px rgba(0,0,0,.6), 0 0 0 1px rgba(255,184,77,.2); }
 .hs-terminal-card > .hs-btn { width: 100%; }
@@ -94,4 +99,22 @@ body {
   .hs-cell { border-radius: 8px; }
   .hs-cell > span:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .hs-btn kbd { display: none; }
+  .hs-board { width: 100%; }
+  .hs-tier { font-size: 10px; padding: 1px 4px; }
+}
+/* short landscape: board beside a compact task/action column, no scrolling */
+@media (max-height: 500px) and (orientation: landscape) {
+  .hs-game { padding: 6px 10px; }
+  .hs-game > header { margin-bottom: 4px; gap: 8px; }
+  .hs-layout { grid-template-columns: minmax(200px, 0.6fr) minmax(0, 2fr); gap: 8px; }
+  .hs-layout > aside, .hs-board-wrap { padding: 8px; }
+  .hs-layout > aside h2, .hs-game > header h1 { font-size: 16px; margin: 0 0 6px; }
+  .hs-actions { gap: 4px; }
+  .hs-tasks { gap: 4px; margin-bottom: 8px; }
+  .hs-tasks li { padding: 5px 8px; font-size: 13px; }
+  .hs-tasks span { font-size: 12px; margin-top: 2px; }
+  .hs-actions .hs-btn { padding: 6px 10px; min-height: 40px; }
+  .hs-status { min-height: 1.2em; font-size: 13px; }
+  .hs-board { width: min(100%, calc((100dvh - 120px) * var(--cols, 6) / var(--rows, 6))); gap: 4px; padding: 5px; }
+  .hs-cell > span:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 }
