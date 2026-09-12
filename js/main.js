@@ -9,8 +9,14 @@ var selected = null;
 var startedAt = 0;
 var statusText = '';
 var BEST_KEY = 'hs-best';
+var SAVE_KEY = 'hs-save';
 
 function app() { return document.getElementById('app'); }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (ch) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+  });
+}
 function loc(r, c) { return { r: r, c: c }; }
 function same(a, b) { return a && b && a.r === b.r && a.c === b.c; }
 function itemAt(p) { return state && state.board[p.r][p.c]; }
@@ -27,6 +33,116 @@ function bestScore() {
 function recordBest(score) {
   if (!(score > bestScore())) return;
   try { window.localStorage.setItem(BEST_KEY, String(Math.floor(score))); } catch (e) { /* storage unavailable */ }
+  persistSave();
+}
+
+// ---------- save document: best + stats + local achievements ----------
+// localStorage is the offline cache; HSPlatform mirrors this doc to the
+// cloud-saves slot when a launch token is present (spec.md §12).
+var saveDoc = loadSaveDoc();
+
+function loadSaveDoc() {
+  try {
+    var d = JSON.parse(window.localStorage.getItem(SAVE_KEY) || 'null');
+    if (d && d.v === 1 && d.stats) return d;
+  } catch (e) { /* storage unavailable */ }
+  return { v: 1, best: 0, achievements: {},
+    stats: { merges: 0, delivers: 0, bestStreak: 0, tier3: 0, repairs: 0, stagesDone: 0, dailiesDone: 0 } };
+}
+
+function persistSave() {
+  saveDoc.best = bestScore();
+  try { window.localStorage.setItem(SAVE_KEY, JSON.stringify(saveDoc)); } catch (e) { /* storage unavailable */ }
+  if (window.HSPlatform) window.HSPlatform.pushSave(saveDoc);
+}
+
+// Remote wins conflicts (cloud is the mirror of record); counters merge by max
+// so two devices never double-count, achievements union by earliest unlock.
+function mergeRemoteSave(remote) {
+  if (!remote || typeof remote !== 'object') return false;
+  var changed = false;
+  if (Number(remote.best) > bestScore()) {
+    try { window.localStorage.setItem(BEST_KEY, String(Math.floor(Number(remote.best)))); } catch (e) { /* ignore */ }
+    changed = true;
+  }
+  var remoteAch = remote.achievements || {};
+  Object.keys(remoteAch).forEach(function (key) {
+    if (!saveDoc.achievements[key]) { saveDoc.achievements[key] = remoteAch[key]; changed = true; }
+  });
+  var rs = remote.stats || {};
+  Object.keys(saveDoc.stats).forEach(function (k) {
+    if (Number(rs[k]) > Number(saveDoc.stats[k] || 0)) { saveDoc.stats[k] = Number(rs[k]); changed = true; }
+  });
+  return changed;
+}
+
+// Achievements are local by design (no server-authoritative unlock path for a
+// pure browser game); they live in the save doc and travel with the cloud
+// mirror. Conditions cover the keys reachable from today's UI (spec.md §16).
+function evaluateAchievements() {
+  var s = saveDoc.stats;
+  var fresh = [];
+  Content.ACHIEVEMENTS.forEach(function (a) {
+    if (saveDoc.achievements[a.key]) return;
+    var ok = false;
+    switch (a.key) {
+      case 'first-merge': ok = s.merges >= 1; break;
+      case 'first-deliver': ok = s.delivers >= 1; break;
+      case 'first-repair': ok = s.repairs >= 1; break;
+      case 'tier3': ok = s.tier3 >= 1; break;
+      case 'streak-6': ok = s.bestStreak >= 6; break;
+      case 'merges-250': ok = s.merges >= 250; break;
+      case 'journey-half': ok = s.stagesDone >= 20; break;
+      case 'journey-done': ok = s.stagesDone >= 40; break;
+      case 'daily-7': ok = s.dailiesDone >= 7; break;
+      case 'delivers-300': ok = s.delivers >= 300; break;
+    }
+    if (ok) { saveDoc.achievements[a.key] = Date.now(); fresh.push(a); }
+  });
+  return fresh;
+}
+
+function trackEvent(event) {
+  var s = saveDoc.stats;
+  var changed = false;
+  if (event.type === 'merge') {
+    s.merges++;
+    if (event.streak > s.bestStreak) s.bestStreak = event.streak;
+    if (event.tier >= 3) s.tier3++;
+    changed = true;
+  } else if (event.type === 'deliver') {
+    s.delivers++;
+    changed = true;
+  } else if (event.type === 'win') {
+    s.repairs++;
+    s.stagesDone++;
+    changed = true;
+  }
+  var fresh = evaluateAchievements();
+  if (fresh.length) changed = true;
+  if (changed) persistSave();
+  return fresh;
+}
+
+// ---------- player chip + leaderboard (hosted mode only) ----------
+function playerChipHtml() {
+  if (!window.HSPlatform || !window.HSPlatform.isOnline()) return '';
+  var labels = { loading: 'Loading…', saving: 'Saving…', synced: 'Synced', error: 'Sync error', offline: 'Offline' };
+  var sync = window.HSPlatform.syncStatus();
+  return '<div class="hs-player" role="status">' +
+    '<span class="hs-sync-dot hs-sync-' + sync + '" aria-hidden="true"></span>' +
+    '<span class="hs-player-name">' + escapeHtml(window.HSPlatform.displayName() || 'Player') + '</span>' +
+    '<span class="hs-sync-label">' + (labels[sync] || sync) + '</span></div>';
+}
+
+function leaderboardHtml() {
+  if (!window.HSPlatform || !window.HSPlatform.isOnline()) return '';
+  var entries = window.HSPlatform.getLeaderboard();
+  if (!entries || !entries.length) return '';
+  return '<section class="hs-lb"><h2>Harbor leaderboard</h2><ol>' + entries.map(function (e, i) {
+    return '<li' + (e.mine ? ' class="mine"' : '') + '><span>' + (i + 1) + '. ' + escapeHtml(e.name) + '</span>' +
+      '<span class="hs-lb-score">' + Math.floor(Number(e.score) || 0) + '</span></li>';
+  }).join('') + '</ol></section>';
 }
 
 function showTitle() {
@@ -37,7 +153,9 @@ function showTitle() {
     '<h1 class="hs-title-name">Harbor Stories</h1>' +
     '<p class="hs-tagline">Merge tool chains, repair the coast, and reveal stories around Brinemist Quay.</p>' +
     (best ? '<p class="hs-best">Best score <b>' + best + '</b></p>' : '') +
-    '<button id="btn-start" class="hs-btn" type="button">Play</button></section></main>';
+    playerChipHtml() +
+    '<button id="btn-start" class="hs-btn" type="button">Play</button>' +
+    leaderboardHtml() + '</section></main>';
   document.getElementById('btn-start').addEventListener('click', startGame);
 }
 
@@ -97,10 +215,16 @@ function apply(command) {
     return false;
   }
   state = result.state;
+  var unlocked = [];
   result.events.forEach(function (event) {
     if (window.HSSfx) window.HSSfx.play(event.type);
+    unlocked = unlocked.concat(trackEvent(event));
   });
   statusText = statusFromEvents(result.events);
+  if (unlocked.length) {
+    statusText += (statusText ? ' ' : '') + 'Achievement unlocked: ' +
+      unlocked.map(function (a) { return a.name; }).join(', ') + '.';
+  }
   selected = null;
   if (state.terminal) recordBest(state.score.total);
   return true;
@@ -201,7 +325,8 @@ function renderGame() {
     '<button id="btn-again" class="hs-btn" type="button">Play again</button></div></div>' : '';
   var muted = window.HSSfx ? window.HSSfx.isMuted() : true;
   app().innerHTML = '<main class="hs-game"><header><div><h1>Harbor Stories</h1><p>' + (cfg.name || '') + '</p></div>' +
-    '<div class="hs-score">Moves <b>' + state.moves + '</b> · Score <b>' + state.score.total + '</b></div></header>' +
+    '<div class="hs-score">Moves <b>' + state.moves + '</b> · Score <b>' + state.score.total + '</b></div>' +
+    playerChipHtml() + '</header>' +
     '<section class="hs-layout"><aside><h2>Restoration tasks</h2><ul class="hs-tasks">' + renderTasks() + '</ul>' +
     '<div class="hs-actions"><button id="btn-deliver" class="hs-btn" type="button">Deliver selected <kbd>D</kbd></button>' +
     '<button id="btn-hint" class="hs-btn secondary" type="button">Hint <kbd>H</kbd></button>' +
@@ -236,6 +361,19 @@ document.addEventListener('keydown', function (event) {
     renderGame();
   }
 });
+
+if (window.HSPlatform) {
+  window.HSPlatform.onUpdate(function () {
+    if (state) renderGame(); else showTitle();
+  });
+  if (window.HSPlatform.isOnline()) {
+    window.HSPlatform.loadCloudSave().then(function (remote) {
+      if (mergeRemoteSave(remote)) persistSave();
+      if (state) renderGame(); else showTitle();
+    });
+    window.HSPlatform.refreshLeaderboard();
+  }
+}
 
 showTitle();
 })();

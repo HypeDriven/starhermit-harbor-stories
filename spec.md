@@ -321,17 +321,21 @@ status line reserved at `min-height: 1.5em`, so a 30 % longer German string refl
 
 ## 12. StarHermit integration
 
-**Used:** the launch manifest only — `starhermit.txt` with `name`, `launch=index.html`, `owner`,
+**Used:** the launch manifest — `starhermit.txt` with `name`, `launch=index.html`, `owner`,
 `server=server.js`, `version`, `contentVersion`, `cover=coverart.png`, which is what
 https://wiki.starhermit.com/ requires for a browser title, plus `server.js` as the declared static host for
-the distribution.
+the distribution. On-platform, `js/platform.js` (`window.HSPlatform`) also: reads the `#game_token=` launch
+fragment (stripped after read), decodes `sub`/`game_scope`, sends `Authorization: Bearer` on every call and
+re-mints the token every 45 min; shows the account nickname from `GET /api/v1/users/{sub}/profile` (never
+`/api/v1/me`, never usernames); mirrors the save document (`hs-save`: best, stats, achievements) to the
+cloud-saves slot via zip+base64 with a 2 s debounce and `pagehide` flush; and reads the leaderboard
+(read-only top 10, nicknames resolved via the profile route) when the platform exposes a `leaderboardId`.
+Achievements stay local — part of the cloud-saved doc; there is no server-authoritative unlock path for a
+pure browser game. Without a token the adapter is inert: zero `/api` calls, offline play unchanged.
 
-**Not used today:** identity/profile, presence, cloud saves, per-game settings, `GET /api/v1/time`,
-leaderboards, achievement delivery and launch activity. The data those need is already modelled — 10 stable
-lowercase achievement keys in `Content.ACHIEVEMENTS`, a date-pure daily seed, a deterministic replayable
-engine with `hashState()` and `validateCommandShape()` for authoritative validation — but no client calls the
-API; the best score lives in `localStorage`. Realtime rooms, matchmaking, chat and voice are deliberately out
-of scope: the ruleset is solo and asynchronous.
+**Not used today:** presence, per-game settings, `GET /api/v1/time`, achievement delivery (server-side
+unlocks) and launch activity. Realtime rooms, matchmaking, chat and voice remain deliberately out of scope:
+the ruleset is solo and asynchronous.
 
 ## 13. Technical architecture
 
@@ -345,9 +349,11 @@ untouched. `serialize`/`deserialize` round-trip through JSON and reject any `v !
 `stableStringify` + `hashString` give a canonical state hash, and `validateCommandShape` (type allow-list,
 512-byte cap, 64-char id cap) is the guard a server script would run before applying a submitted command.
 
-**Persistence.** Two `localStorage` keys, both wrapped in try/catch so private-mode browsers degrade silently:
-`hs-best` (integer best score) and `hs-sfx` (`{volume, muted}`). No session state is persisted; closing the
-tab abandons the round.
+**Persistence.** Three `localStorage` keys, all wrapped in try/catch so private-mode browsers degrade silently:
+`hs-best` (integer best score), `hs-save` (save document: best mirror, cumulative stats, unlocked
+achievements) and `hs-sfx` (`{volume, muted}`). `hs-best`/`hs-save` are the offline cache; signed in, the
+`hs-save` doc is mirrored to the StarHermit cloud-saves slot (remote wins conflicts, counters merge by max).
+No session state is persisted; closing the tab abandons the round.
 
 **Performance.** No animation frame loop and no canvas — the page is idle between inputs. A full
 `innerHTML` re-render of a 7×7 board is ~49 buttons and stays well under one frame; audio decode is lazy and
@@ -381,7 +387,8 @@ again, with zero page errors in either pass.
   touch in the browser. ✔
 - No console errors or warnings in either e2e pass. ✔
 - Text and UI are not cut off at 1280×800 or 390×844; the results card scrolls if the viewport is short. ✔
-- Features that could use StarHermit do not yet — the honest gap in §12/§17. ✘
+- StarHermit launch token, account nickname, cloud-saved progress and the read-only leaderboard are wired
+  (§12); the server-validated daily leaderboard remains future work (§17). ✔
 
 ## 15. Asset inventory
 
@@ -407,9 +414,11 @@ Kimodo would produce assets with nowhere to live.
 1. Only journey stage 1 is reachable; the other 39 stages, all challenges, practice, daily, endless and the
    tutorial exist as tested data with no UI entry point.
 2. No localization — English string literals only, against a nine-locale requirement.
-3. No StarHermit API usage beyond the launch manifest: no identity, cloud save, leaderboard or achievement
-   delivery, so progress is device-local and losable with site data.
-4. `Content.ACHIEVEMENTS` is declared but nothing ever unlocks one.
+3. StarHermit usage stops at the launch token, profile nickname, cloud save mirror, local achievements and
+   the read-only leaderboard (§12): scores are never submitted, so leaderboard entries only appear if the
+   platform seeds them, and `GET /api/v1/time` is unused.
+4. `Content.ACHIEVEMENTS` unlocks locally into the save doc (announced in the status line) but is never
+   delivered to a server-side catalog — browser titles have no entitlement for that.
 5. `cfg.mechanics.undo` is set on most content and tutorial lesson 5 teaches undo, but the engine has no undo
    command and the UI has no U key.
 6. The five theme palettes and the per-chain `colorHC` high-contrast values are unused by the DOM renderer.
@@ -428,9 +437,11 @@ Kimodo would produce assets with nowhere to live.
 - **Story scenes.** Show `SCENES[stage]` on stage completion with its two choices, flavour-only by design.
 - **Localization** of all `main.js` and `content.js` strings into the nine required locales, chosen from the
   host locale with an in-game override.
-- **StarHermit wiring:** launch-token scope, `GET /api/v1/time` for the daily UTC boundary, cloud-saved
-  progression, idempotent achievement unlocks for the ten declared keys, and a daily leaderboard validated
-  server-side by replaying the command log against `rules.js` (`hashState` is already the checksum).
+- **StarHermit wiring:** done — launch-token scope (fragment read, 45-min refresh), cloud-saved progression,
+  idempotent local achievement unlocks for the ten declared keys (carried in the save doc). Still future:
+  `GET /api/v1/time` for the daily UTC boundary and a daily leaderboard validated server-side by replaying
+  the command log against `rules.js` (`hashState` is already the checksum); clients cannot submit scores, so
+  that validation must live in a Jint game script, not this static host.
 - **Undo** as a real command (`mechanics.undo`), with the U key and lesson 5's goal event.
 - **Theming:** drive the board's plank tint and cell colours from the active `THEMES` palette and offer the
   `colorHC` high-contrast set as an accessibility option.
