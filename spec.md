@@ -16,7 +16,7 @@ restoration jobs that bring a fog-bound harbor town back to life.
 | Players | 1, local, offline after first load |
 | Session | 60–150 s per stage (the shipped stage wins in 8 hint-optimal moves; human play 15–25) |
 | Platforms | Desktop and mobile browsers, portrait and landscape |
-| Rendering | Plain DOM: a CSS grid of `<button>` cells with emoji glyphs and text labels. No canvas, no WebGL. |
+| Rendering | DOM board (a CSS grid of `<button>` cells with emoji glyphs and text labels) over an optional 2D-canvas harbor backdrop and particle layer, switched by graphics quality presets. No WebGL rendering. |
 | Audio | WebAudio, one effects bus, 14 authored Opus one-shots plus a looped ambience bed, synth fallbacks |
 
 `vendor/three.module.min.js` is present but no module imports it; the game is DOM-only.
@@ -25,15 +25,19 @@ restoration jobs that bring a fog-bound harbor town back to life.
 
 | Path | Responsibility |
 |---|---|
-| `index.html` | 680-byte shell: `<div id="app">`, five deferred script tags, `<noscript>` notice. |
+| `index.html` | Shell: `<div id="app">`, nine deferred script tags, `<noscript>` notice. |
 | `css/style.css` | Every style: title screen, HUD, task rail, board grid, cells, results card, mobile rules. |
 | `js/rng.js` | UMD `HSRNG`. mulberry32 PRNG, FNV-1a `hashString`, three derived streams (rules/decor/av). |
 | `js/content.js` | UMD `HSContent`. 6 tool chains, 5 themes, 40 journey stages, 40 story scenes, 6 challenges, 3 practice presets, endless ruleset, daily generator, 5 tutorial lessons, 10 achievements. |
 | `js/rules.js` | UMD `HSRules`. Pure engine: create, legality, resolution, scoring, spawn, terminal, hints, hashing, serialization, command-shape validation. No DOM, no `Date.now()`. |
 | `js/sfx.js` | `window.HSSfx`. Event→sample map, lazy fetch/decode/cache, ambience loop, per-event synth fallback, mute/volume persisted to `localStorage`. |
+| `js/gfx.js` | UMD `HSGfxModel`. Pure graphics quality model: presets, categories, `detectPreset`, `resolve`, `presetTier`, `choosePreset`, `setOverride`, `describe`. |
+| `js/graphics.js` | `window.HSGfx`. GPU detection, backdrop canvas `#hs-gfx-bg`, particle canvas `#hs-gfx-fx`, `body[data-gfx-*]` attributes, frame loop, adaptive resolution, FPS readout, `localStorage['hs-gfx']`. |
+| `js/settings.js` | `window.HSSettings`. The Settings dialog (Graphics section) and its strings in nine locales. |
 | `js/main.js` | The whole UI: title screen, game render, click/key handlers, status line, best-score store. |
 | `server.js` | 72-line static file server (`PORT`, default 8080), traversal guard, MIME table incl. `.webp`/`.opus`. |
 | `tests/rules.test.mjs` | `npm test` — 12 `node --test` cases over the rules contract. |
+| `tests/gfx.test.mjs` | `npm test` — 6 `node --test` cases over the graphics quality model. |
 | `tests/e2e.mjs` | `npm run test:e2e` — playwright-core playthrough of the real UI, desktop + mobile. |
 | `sfx/` | 15 Opus clips, `manifest.txt` (canonical), `manifest.json` (generator input), `manifest.md`. |
 | `assets/` | `key-art.webp`, `harbor-restored.webp`, `harbor-jammed.webp`, `dock-planks.webp`. |
@@ -54,8 +58,9 @@ restoration jobs that bring a fog-bound harbor town back to life.
    is always one click from a fresh board. Rules in: gentle art and audio for the lock-up state. Rules out:
    score penalties, lives, streak punishment, run loss.
 5. **Cozy dusk, never spectacle.** Golden-hour palette, one warm accent, motion measured in tens of
-   milliseconds. Rules in: painterly key art, a plank texture under the board. Rules out: particles,
-   camera shake, screen flashes, anything that moves while you are reading the task list.
+   milliseconds. Rules in: painterly key art, a plank texture under the board, a slow dusk harbor behind the
+   panels, a brief spark burst on the cell you just merged or delivered. Rules out: camera shake, screen
+   flashes, anything that moves over the task list while you are reading it.
 
 ## 3. Player experience
 
@@ -188,6 +193,7 @@ only — never rules, never score. The cast is Old Tob, Wren, Sela and the keepe
 | Hint | **H**, or the Hint button | Tap Hint |
 | Restart | **R**, or the Restart button | Tap Restart |
 | Mute | The "Sound: on/off" toggle (`aria-pressed`) | Same |
+| Settings | The **Settings** button (title screen and game header); Tab/Shift+Tab cycle inside the dialog, Esc or Close shuts it | Tap Settings; tap outside the dialog or Close |
 | Play again | The button in the results card (auto-focused) | Same |
 
 There is no drag, no multi-touch and no gesture requirement: every action is one or two discrete taps, which
@@ -207,7 +213,8 @@ showTitle ──Play/btn-start──▶ renderGame ──terminal state──▶
     ▲                            │  ▲                                   │
     └───────── R / Restart ──────┘  └────────── Play again ─────────────┘
 ```
-Two screens only; there is no pause, settings or mode-select screen. `renderGame()` re-renders the whole
+Two screens plus a Settings dialog (opened from either; it lives outside `#app`, so board re-renders never touch
+it, and game shortcuts are inert while it is open). There is no pause or mode-select screen. `renderGame()` re-renders the whole
 `#app` after each action and restores keyboard focus by selector (`focusKey`/`restoreFocus`), so focus never
 falls back to `<body>` mid-game.
 
@@ -244,10 +251,36 @@ inside buttons at 0.82 em, hidden under 700 px where there is no keyboard.
 **The hero** is the board panel: warm plank texture, cool cells, one amber-lit selection. The key art is hero
 only on the title screen, and the results illustration is the hero of the end card.
 
-**Motion.** Almost none: a `filter: brightness(1.08)` button hover, and a 0.5 s fade-and-rise on the key art
-and results illustration, wrapped in `@media (prefers-reduced-motion: no-preference)` so a reduced-motion user
-gets the identical layout with no animation at all. There are no particles, transitions on board state or
-camera moves — a merged tool simply *is* the next tier on the next render.
+**Motion.** Slow and ambient: a `filter: brightness(1.08)` button hover; a 0.5 s fade-and-rise on the key art
+and results illustration; with detailed tiles, a 2 px lift on hover and a gentle 1.6 s bob on the selected
+tool; with an animated backdrop, drifting waves, fog and a sweeping lighthouse beam; with particles, a ~0.8 s
+spark burst on merge/deliver. There are no camera moves or transitions on board state — a merged tool simply
+*is* the next tier on the next render. All of it is off under `prefers-reduced-motion: reduce` (the backdrop
+is drawn still, particles are skipped), with the identical layout.
+
+**Graphics.** Lighting and depth come from layered 2D effects, each switchable. The **harbor backdrop**
+(`#hs-gfx-bg`, off/still/animated) paints a dusk sky with stars, a low sun on the horizon, a headland town with
+lit windows, a lighthouse whose beam sweeps and narrows as it turns, a sea with perspective wave lines and a
+shimmering sun-glitter path, two bobbing moored boats, drifting fog and (with particles) rising embers; the
+static parts are cached in an offscreen layer and the moving parts redraw at ~30 fps. **Tile detail**
+(flat/detailed) turns empty cells into dark water with a caustic highlight, occupied tiles into bevelled slate
+with a halo and rim in the chain's colour (gold rim on tier-4 masterworks), lights the plank deck from above,
+and gives panels a translucent glass finish over the backdrop. **Shadows** (off/low/high) add tile, panel and
+glyph drop shadows. **Glow (bloom)** (off/on) lights the selected tool, masterworks, lantern glyphs, the title,
+primary buttons, the lighthouse lamp and the sun. **Colour grade & vignette** (off/on) warms the backdrop and
+darkens its corners (behind the UI, never over text or pieces). **Particles** (off/low/high) add merge and
+delivery sparks (a ring and a larger burst when a task completes) on `#hs-gfx-fx`. The Settings dialog's
+**Graphics** section offers a quality preset (Auto, chosen from the WebGL unmasked renderer string where
+software renderers get Low, discrete GPUs and Apple M get High, others Balanced, and phones/tablets are capped at
+Balanced; Low; Balanced; High; Ultra), a render scale (50–200 % of the preset's, applied to the canvases on top
+of the device pixel ratio capped at 1/1.5/2/2 per preset), one override per effect ("From preset (…)" by
+default; choosing a preset clears overrides), adaptive resolution (averages 90 frames; above 26 ms it steps the
+canvas scale down by 0.1 to 60 %, below 14 ms back up by 0.05) and a frame-rate readout (bottom-left, never
+over controls), plus a summary line "GPU · effects · W×H px". Low is the original flat look and runs no frame
+loop at all; a loop runs only while the backdrop is animated, particles are live or the readout is shown.
+Changes apply immediately, are saved in `localStorage['hs-gfx']`, and are mirrored as `body[data-gfx-preset]`,
+`data-gfx-auto` and `data-gfx-<category>`. If a canvas cannot be created the game draws without the scene and
+the panel says so; nothing is logged to the console.
 
 **Visual assets the design calls for:** title key art (golden-hour harbor), a win illustration (lit pier), a
 lock-up illustration (fogged, crated dock), a dock-plank board texture, and store cover art derived from the
@@ -296,6 +329,10 @@ achievements). `index.html` declares `lang="en"`. **The nine required locales (e
 de-DE, fr-FR, fr-CA, pt-BR, it-IT) do not ship** — this is the largest open gap against the product spec, and
 is listed in §16 and §17 rather than described as working.
 
+The one exception is the Settings dialog (`js/settings.js`): its labels, options, summary and notes ship in all
+nine locales, chosen from `?lang=` or `navigator.languages` (e.g. `es-MX` → es-419, `fr-CA` → fr-CA, `en-AU` →
+en-GB, anything unmatched → en-US).
+
 The layout is expansion-ready: no fixed-width text containers, `clamp()` type, wrapping task lines and a
 status line reserved at `min-height: 1.5em`, so a 30 % longer German string reflows instead of clipping.
 
@@ -313,8 +350,9 @@ status line reserved at `min-height: 1.5em`, so a 30 % longer German string refl
 - **Colour is never the only cue.** Chain identity is glyph + written tier name; selection is border, glow
   *and* `aria-pressed`; task progress is the numeral "1/2". Content also carries a `colorHC` high-contrast
   value per chain for future theming.
-- **Reduced motion.** The only two animations are inside `prefers-reduced-motion: no-preference`; with the OS
-  setting on, nothing moves and no information is lost.
+- **Reduced motion.** Every animation (fade-ins, tile lift/bob, animated backdrop, particles) is gated on
+  `prefers-reduced-motion`; with the OS setting on, nothing moves, the Settings panel says so, and no
+  information is lost. Graphics effects never lower the contrast of pieces, text or controls.
 - **Audio is never required.** Every cue has a text equivalent in the status line, and sound is off-able and
   remembered.
 - **Target sizes.** Buttons are ~40 px tall with 8 px gaps; board cells on a 390 px phone are ~66 px square.
@@ -339,9 +377,11 @@ the ruleset is solo and asynchronous.
 
 ## 13. Technical architecture
 
-**Module boundaries.** `rng → content → rules → sfx → main`, loaded as five `defer` scripts sharing browser
-globals; `rng`, `content` and `rules` are UMD so Node tests load the exact shipped code. Only `main.js` touches
-the DOM; only `sfx.js` touches WebAudio; `rules.js` imports nothing but `rng.js` and contains no clock — time
+**Module boundaries.** `rng → content → rules → sfx → platform → gfx → graphics → settings → main`, loaded as
+`defer` scripts sharing browser globals; `rng`, `content`, `rules` and `gfx` are UMD so Node tests load the exact
+shipped code. `main.js` owns `#app`; `graphics.js` owns only its two canvases, the FPS readout and the
+`body[data-gfx-*]` attributes, and `settings.js` only its dialog; `main.js` hands rules events to
+`HSGfx.events()` after each render for particles, and cosmetic randomness never touches the rules RNG; only `sfx.js` touches WebAudio; `rules.js` imports nothing but `rng.js` and contains no clock — time
 enters solely as `cmd.atMs` from the caller.
 
 **Determinism and replay.** `applyCommand` is `(state, cmd) → {ok, state, events}` with the input state
@@ -349,13 +389,15 @@ untouched. `serialize`/`deserialize` round-trip through JSON and reject any `v !
 `stableStringify` + `hashString` give a canonical state hash, and `validateCommandShape` (type allow-list,
 512-byte cap, 64-char id cap) is the guard a server script would run before applying a submitted command.
 
-**Persistence.** Three `localStorage` keys, all wrapped in try/catch so private-mode browsers degrade silently:
+**Persistence.** Four `localStorage` keys, all wrapped in try/catch so private-mode browsers degrade silently:
 `hs-best` (integer best score), `hs-save` (save document: best mirror, cumulative stats, unlocked
-achievements) and `hs-sfx` (`{volume, muted}`). `hs-best`/`hs-save` are the offline cache; signed in, the
+achievements), `hs-sfx` (`{volume, muted}`) and `hs-gfx` (`{preset, render_scale, adaptive, show_fps,
+<category>}`, overrides only). `hs-best`/`hs-save` are the offline cache; signed in, the
 `hs-save` doc is mirrored to the StarHermit cloud-saves slot (remote wins conflicts, counters merge by max).
 No session state is persisted; closing the tab abandons the round.
 
-**Performance.** No animation frame loop and no canvas — the page is idle between inputs. A full
+**Performance.** At Low there is no frame loop and no canvas is created — the page is idle between inputs;
+higher presets run `requestAnimationFrame` only while something moves (see Graphics, §8). A full
 `innerHTML` re-render of a 7×7 board is ~49 buttons and stays well under one frame; audio decode is lazy and
 cached per clip; the four WebP assets total 138 KB and the whole client is under 1 MB including sound.
 
@@ -363,22 +405,29 @@ cached per clip; the four WebP assets total 138 KB and the whole client is under
 `/usr/bin/google-chrome` through playwright-core, and mirrors the game in Node with the same `rules.js`. It
 uses `Rules.hint()` only to *decide* which cell to click; every action is a real `page.click` on
 `button.hs-cell[data-r][data-c]`, `#btn-deliver` or `#btn-hint`, and after each one it waits for the visible
-Moves counter to match the mirror. Any `pageerror` or console `error` fails the run.
+Moves counter to match the mirror. Any `pageerror` or console `error`/`warning` fails the run.
 
 ## 14. Testing and acceptance criteria
 
-`npm test` (`tests/rules.test.mjs`, 12 cases) verifies: seeded creation is reproducible and seed-sensitive;
+`npm test` (`tests/rules.test.mjs`, 12 cases, plus `tests/gfx.test.mjs`, 6 cases) verifies: seeded creation is reproducible and seed-sensitive;
 all 40 journey stages, 6 challenges, 3 practice presets, the endless ruleset, a daily config and all 5 tutorial
 lessons create a board with at least one legal action; all ten documented rejection reasons, with proof the
 state hash is unchanged; the worked scoring example above; streak reset and 100 ms time quantization; the four
 losing terminal reasons; tide spawn cadence and empty-board restock; the endless task-wave roll; hint priority
 order and that following hints from stage 1 always terminates; serialize/deserialize round-trip and version
-rejection; command-shape validation; and that `dailyConfig` is a pure function of the date.
+rejection; command-shape validation; and that `dailyConfig` is a pure function of the date. The graphics tests
+cover `detectPreset` on sample GPU strings and the mobile cap, `resolve` with auto/explicit presets, overrides
+and render-scale clamping, preset changes clearing overrides, and the cost summary.
 
 `npm run test:e2e` runs the playthrough twice — desktop 1280×800 and mobile 390×844 with touch — asserting the
 title screen, 25 cells and 2 tasks at start, Moves 0, a hint that changes the status line, a full win via board
 clicks, the "Harbor restored!" card with a score at least the mirror's, and a clean fresh board after Play
-again, with zero page errors in either pass.
+again. Each pass then opens Settings from the game header (Auto reads "detected: Low" under the software GPU,
+and the dialog fits the viewport), switches Low → High (checked via `body[data-gfx-preset]` and the backdrop
+canvas), overrides Shadows to Off (checked in the summary), confirms H is inert while the dialog is open and Esc
+returns focus to Settings, reloads and checks the preset and override persisted, picks Ultra (override cleared),
+turns on the frame-rate readout and plays four moves at Ultra — with zero page errors, console errors or
+warnings in either pass.
 
 **QA bar (agents/qa.md) as checkable statements** — all currently true:
 - A first-time player is taught by the stage intro, the named task list and per-action status text; Hint always
@@ -413,7 +462,7 @@ Kimodo would produce assets with nowhere to live.
 
 1. Only journey stage 1 is reachable; the other 39 stages, all challenges, practice, daily, endless and the
    tutorial exist as tested data with no UI entry point.
-2. No localization — English string literals only, against a nine-locale requirement.
+2. No localization beyond the Settings dialog — game strings are English literals, against a nine-locale requirement.
 3. StarHermit usage stops at the launch token, profile nickname, cloud save mirror, local achievements and
    the read-only leaderboard (§12): scores are never submitted, so leaderboard entries only appear if the
    platform seeds them, and `GET /api/v1/time` is unused.
@@ -428,7 +477,8 @@ Kimodo would produce assets with nowhere to live.
 10. Every action re-renders `#app` wholesale; focus is restored by selector, but text selection and scroll
     position inside the task rail are not.
 11. There is no volume slider — only a mute toggle — despite `HSSfx.setVolume` existing.
-12. No pause, settings or help screen; the rules live entirely in the stage intro and the status line.
+12. No pause or help screen; Settings holds graphics only (no volume slider yet), and the rules live entirely in
+    the stage intro and the status line.
 
 ## 17. Design intent not yet implemented
 

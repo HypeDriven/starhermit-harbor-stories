@@ -11,9 +11,10 @@
  * DECIDE which visible cells to click — every action is performed through
  * page clicks on the real board buttons, exactly as a player would.
  *
- * Note: Harbor Stories is a single-screen merge puzzler. It has no
- * pause/resume or settings screens, so those are not applicable here; the
- * Hint button and Play-again flow are exercised instead.
+ * Note: Harbor Stories is a single-screen merge puzzler with no pause
+ * screen; the Hint button, Play-again flow and the Settings → Graphics panel
+ * (preset switch, per-effect override, persistence across reload) are
+ * exercised instead.
  *
  * Run: npm run test:e2e
  */
@@ -173,6 +174,95 @@ async function playthrough(page, tag) {
   });
 }
 
+/** Settings → Graphics through the visible panel: presets, an override, persistence. */
+async function graphicsFlow(page, tag) {
+  const shot = (n) => `/tmp/harbor-stories-e2e-${n}-${tag}.png`;
+  const body = (attr) => page.getAttribute('body', attr);
+  const expectAttr = async (attr, want) => {
+    await page.waitForFunction(([a, w]) => document.body.getAttribute(a) === w, [attr, want], { timeout: 3000 });
+  };
+
+  await step(`[${tag}] settings opens from the game header`, async () => {
+    // Headless Chrome renders with SwiftShader, so Auto resolves to Low.
+    if (await body('data-gfx-auto') !== 'true') throw new Error('graphics should start on Auto');
+    if (await body('data-gfx-preset') !== 'low') throw new Error('Auto should detect Low on a software GPU');
+    await page.click('#btn-settings');
+    await page.waitForSelector('#hs-settings-root .hs-settings', { timeout: 3000 });
+    const auto = await page.textContent('#gfx-preset option[value="auto"]');
+    if (!/detected: Low/.test(auto)) throw new Error('auto label: ' + auto);
+    const box = await page.locator('.hs-settings').boundingBox();
+    const vp = page.viewportSize();
+    if (box.x < 0 || box.y < 0 || box.x + box.width > vp.width + 1 || box.y + box.height > vp.height + 1) {
+      throw new Error('settings panel does not fit the viewport');
+    }
+  });
+
+  await step(`[${tag}] switch preset Low then High, override shadows`, async () => {
+    await page.selectOption('#gfx-preset', 'low');
+    await expectAttr('data-gfx-preset', 'low');
+    await expectAttr('data-gfx-auto', 'false');
+    await page.selectOption('#gfx-preset', 'high');
+    await expectAttr('data-gfx-preset', 'high');
+    await expectAttr('data-gfx-background', 'animated');
+    if (!(await page.locator('#hs-gfx-bg').isVisible())) throw new Error('backdrop canvas not visible at High');
+    await page.selectOption('#gfx-shadows', 'off');
+    await expectAttr('data-gfx-shadows', 'off');
+    const summary = await page.textContent('#gfx-summary');
+    if (/shadows/.test(summary) || !/animated harbor/.test(summary)) throw new Error('summary not updated: ' + summary);
+    // Game shortcuts are inert while the panel is open.
+    const before = await page.textContent('#hs-status');
+    await page.focus('#btn-settings-close'); // (a focused <select> would treat H as type-ahead)
+    await page.keyboard.press('h');
+    if (await page.textContent('#hs-status') !== before) throw new Error('H fired behind the settings panel');
+    await page.screenshot({ path: shot('settings') });
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('#hs-settings-root', { state: 'detached', timeout: 3000 });
+    const focused = await page.evaluate(() => document.activeElement && document.activeElement.id);
+    if (focused !== 'btn-settings') throw new Error('focus not returned to Settings button: ' + focused);
+    await page.screenshot({ path: shot('board-high') });
+  });
+
+  await step(`[${tag}] graphics settings survive reload; preset clears overrides`, async () => {
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForSelector('#btn-start');
+    await expectAttr('data-gfx-preset', 'high');
+    await expectAttr('data-gfx-shadows', 'off');
+    await page.click('#btn-settings');
+    await page.waitForSelector('#gfx-preset');
+    if (await page.inputValue('#gfx-preset') !== 'high') throw new Error('preset not restored');
+    if (await page.inputValue('#gfx-shadows') !== 'off') throw new Error('override not restored');
+    await page.selectOption('#gfx-preset', 'ultra');
+    await expectAttr('data-gfx-preset', 'ultra');
+    await expectAttr('data-gfx-shadows', 'high');
+    if (await page.inputValue('#gfx-shadows') !== 'preset') throw new Error('choosing a preset did not clear overrides');
+    await page.check('#gfx-fps');
+    await page.waitForSelector('#hs-fps', { state: 'visible', timeout: 3000 });
+    await page.click('#btn-settings-close');
+    await page.waitForSelector('#hs-settings-root', { state: 'detached', timeout: 3000 });
+  });
+
+  await step(`[${tag}] play a few moves at Ultra (particles, backdrop) without errors`, async () => {
+    await page.click('#btn-start');
+    await page.waitForSelector('.hs-board');
+    let mirror = Rules.createGame(Content.JOURNEY[0]);
+    for (let i = 0; i < 4 && !mirror.terminal; i++) {
+      const h = Rules.hint(mirror);
+      if (h.type === 'deliver') {
+        await page.click(cellSel(h.at.r, h.at.c));
+        await page.click('#btn-deliver');
+        mirror = Rules.applyCommand(mirror, { type: 'deliver', at: h.at }).state;
+      } else {
+        await page.click(cellSel(h.from.r, h.from.c));
+        await page.click(cellSel(h.to.r, h.to.c));
+        mirror = Rules.applyCommand(mirror, { type: h.type, from: h.from, to: h.to }).state;
+      }
+      await page.waitForFunction((n) => Number(document.querySelector('.hs-score b').textContent) === n, mirror.moves, { timeout: 3000 });
+    }
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: shot('board-ultra') });
+  });
+}
+
 const allErrors = [];
 let browser;
 try {
@@ -181,7 +271,7 @@ try {
 
   browser = await chromium.launch({
     executablePath: '/usr/bin/google-chrome',
-    args: ['--no-sandbox', '--enable-unsafe-swiftshader'],
+    args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
   });
 
   for (const pass of [
@@ -193,10 +283,11 @@ try {
     const errors = [];
     page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
     page.on('console', (m) => {
-      if (m.type() === 'error' && !browserNoise.test(m.text())) errors.push(`console: ${m.text()}`);
+      if ((m.type() === 'error' || m.type() === 'warning') && !browserNoise.test(m.text())) errors.push(`console ${m.type()}: ${m.text()}`);
     });
     try {
       await playthrough(page, pass.tag);
+      await graphicsFlow(page, pass.tag);
     } catch (err) {
       if (errors.length) console.error(`page errors during ${pass.tag} pass:\n` + errors.join('\n'));
       throw err;

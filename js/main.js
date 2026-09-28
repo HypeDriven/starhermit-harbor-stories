@@ -10,6 +10,7 @@ var startedAt = 0;
 var statusText = '';
 var BEST_KEY = 'hs-best';
 var SAVE_KEY = 'hs-save';
+var pendingFx = null; // rules events waiting for their particle burst after the next render
 
 function app() { return document.getElementById('app'); }
 function escapeHtml(s) {
@@ -22,6 +23,16 @@ function same(a, b) { return a && b && a.r === b.r && a.c === b.c; }
 function itemAt(p) { return state && state.board[p.r][p.c]; }
 function itemName(item) { return item ? Content.itemLabel(item.c, item.t) : 'Open water'; }
 function icon(item) { return item ? Content.CHAINS[item.c].icon : '·'; }
+function chainHex(item) { return '#' + ('00000' + Content.CHAINS[item.c].color.toString(16)).slice(-6); }
+function settingsLabel() { return window.HSSettings ? window.HSSettings.label() : 'Settings'; }
+function settingsButton(extra) {
+  return window.HSSettings ? '<button id="btn-settings" class="hs-btn secondary' + (extra || '') + '" type="button">' +
+    escapeHtml(settingsLabel()) + '</button>' : '';
+}
+function wireSettings() {
+  var b = document.getElementById('btn-settings');
+  if (b) b.addEventListener('click', function () { window.HSSettings.open(); });
+}
 
 function bestScore() {
   try {
@@ -154,9 +165,11 @@ function showTitle() {
     '<p class="hs-tagline">Merge tool chains, repair the coast, and reveal stories around Brinemist Quay.</p>' +
     (best ? '<p class="hs-best">Best score <b>' + best + '</b></p>' : '') +
     playerChipHtml() +
-    '<button id="btn-start" class="hs-btn" type="button">Play</button>' +
+    '<div class="hs-title-actions"><button id="btn-start" class="hs-btn" type="button">Play</button>' +
+    settingsButton() + '</div>' +
     leaderboardHtml() + '</section></main>';
   document.getElementById('btn-start').addEventListener('click', startGame);
+  wireSettings();
 }
 
 function startGame() {
@@ -215,6 +228,7 @@ function apply(command) {
     return false;
   }
   state = result.state;
+  pendingFx = result.events;
   var unlocked = [];
   result.events.forEach(function (event) {
     if (window.HSSfx) window.HSSfx.play(event.type);
@@ -310,7 +324,9 @@ function renderGame() {
     var item = state.board[r][c];
     var isSelected = same(selected, loc(r, c));
     cells += '<button class="hs-cell' + (item ? ' occupied' : '') + (isSelected ? ' selected' : '') +
-      '" data-r="' + r + '" data-c="' + c + '" type="button" aria-pressed="' + isSelected +
+      '" data-r="' + r + '" data-c="' + c + '"' +
+      (item ? ' data-chain="' + item.c + '" data-tier="' + item.t + '" style="--chain:' + chainHex(item) + '"' : '') +
+      ' type="button" aria-pressed="' + isSelected +
       '" aria-label="Row ' + (r + 1) + ', column ' + (c + 1) + ': ' + itemName(item) + '">' +
       '<span class="hs-icon" aria-hidden="true">' + icon(item) + (item ? '<b class="hs-tier" aria-hidden="true">' + (item.t + 1) + '</b>' : '') + '</span><span>' + itemName(item) + '</span></button>';
   }
@@ -325,7 +341,8 @@ function renderGame() {
     '<button id="btn-again" class="hs-btn" type="button">Play again</button></div></div>' : '';
   var muted = window.HSSfx ? window.HSSfx.isMuted() : true;
   app().innerHTML = '<main class="hs-game"><header><div><h1>Harbor Stories</h1><p>' + (cfg.name || '') + '</p></div>' +
-    '<div class="hs-score">Moves <b>' + state.moves + '</b> · Score <b>' + state.score.total + '</b></div>' +
+    '<div class="hs-header-tools"><div class="hs-score">Moves <b>' + state.moves + '</b> · Score <b>' + state.score.total + '</b></div>' +
+    settingsButton(' hs-settings-btn') + '</div>' +
     playerChipHtml() + '</header>' +
     '<section class="hs-layout"><aside><h2>Restoration tasks</h2><ul class="hs-tasks">' + renderTasks() + '</ul>' +
     '<div class="hs-actions"><button id="btn-deliver" class="hs-btn" type="button">Deliver selected <kbd>D</kbd></button>' +
@@ -342,13 +359,17 @@ function renderGame() {
   document.getElementById('btn-hint').addEventListener('click', showHint);
   document.getElementById('btn-restart').addEventListener('click', startGame);
   document.getElementById('btn-sound').addEventListener('click', toggleSound);
+  wireSettings();
   var again = document.getElementById('btn-again');
   if (again) { again.addEventListener('click', startGame); again.focus(); }
   else restoreFocus(key);
+  if (pendingFx && window.HSGfx) window.HSGfx.events(pendingFx);
+  pendingFx = null;
 }
 
 document.addEventListener('keydown', function (event) {
   if (!state || event.altKey || event.ctrlKey || event.metaKey) return;
+  if (window.HSSettings && window.HSSettings.isOpen()) return;
   var k = event.key.toLowerCase();
   if (k === 'r') { event.preventDefault(); startGame(); return; }
   if (state.terminal) return;
