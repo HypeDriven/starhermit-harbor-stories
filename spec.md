@@ -496,3 +496,7 @@ Kimodo would produce assets with nowhere to live.
 - **Theming:** drive the board's plank tint and cell colours from the active `THEMES` palette and offer the
   `colorHC` high-contrast set as an accessibility option.
 - **Volume slider** in a settings panel alongside the existing mute toggle.
+
+## Browser interference
+
+`browser-guard.js` (loaded from `index.html`) suppresses browser UI that gets in the way of play: the right-click context menu, the iOS long-press callout, copy / cut / paste, and page text selection. Text fields (inputs, textareas, selects, contenteditable) keep normal selection, context menu and clipboard behaviour.
