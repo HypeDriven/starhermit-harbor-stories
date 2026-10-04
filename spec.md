@@ -25,8 +25,10 @@ restoration jobs that bring a fog-bound harbor town back to life.
 
 | Path | Responsibility |
 |---|---|
-| `index.html` | Shell: `<div id="app">`, nine deferred script tags, `<noscript>` notice. |
+| `index.html` | Shell: `<div id="app">`, ten deferred script tags, `<noscript>` notice. |
 | `css/style.css` | Every style: title screen, HUD, task rail, board grid, cells, results card, mobile rules. |
+| `starhermit-sdk.js` | Shared StarHermit client (`window.StarHermit`), copied unchanged from `tools/`. |
+| `js/platform.js` | `window.HSPlatform`: StarHermit adapter over the SDK (§12). |
 | `js/rng.js` | UMD `HSRNG`. mulberry32 PRNG, FNV-1a `hashString`, three derived streams (rules/decor/av). |
 | `js/content.js` | UMD `HSContent`. 6 tool chains, 5 themes, 40 journey stages, 40 story scenes, 6 challenges, 3 practice presets, endless ruleset, daily generator, 5 tutorial lessons, 10 achievements. |
 | `js/rules.js` | UMD `HSRules`. Pure engine: create, legality, resolution, scoring, spawn, terminal, hints, hashing, serialization, command-shape validation. No DOM, no `Date.now()`. |
@@ -38,6 +40,7 @@ restoration jobs that bring a fog-bound harbor town back to life.
 | `server.js` | 72-line static file server (`PORT`, default 8080), traversal guard, MIME table incl. `.webp`/`.opus`. |
 | `tests/rules.test.mjs` | `npm test` — 12 `node --test` cases over the rules contract. |
 | `tests/gfx.test.mjs` | `npm test` — 6 `node --test` cases over the graphics quality model. |
+| `tests/platform.test.mjs` | `npm test` — 3 cases: launch token, profile, cloud save `game:<slug>`, settings KV, bindings, invite link; standalone makes no fetch. |
 | `tests/e2e.mjs` | `npm run test:e2e` — playwright-core playthrough of the real UI, desktop + mobile. |
 | `sfx/` | 15 Opus clips, `manifest.txt` (canonical), `manifest.json` (generator input), `manifest.md`. |
 | `assets/` | `key-art.webp`, `harbor-restored.webp`, `harbor-jammed.webp`, `dock-planks.webp`. |
@@ -359,25 +362,41 @@ status line reserved at `min-height: 1.5em`, so a 30 % longer German string refl
 
 ## 12. StarHermit integration
 
-**Used:** the launch manifest — `starhermit.txt` with `name`, `launch=index.html`, `owner`,
-`server=server.js`, `version`, `contentVersion`, `cover=coverart.png`, which is what
-https://wiki.starhermit.com/ requires for a browser title, plus `server.js` as the declared static host for
-the distribution. On-platform, `js/platform.js` (`window.HSPlatform`) also: reads the `#game_token=` launch
-fragment (stripped after read), decodes `sub`/`game_scope`, sends `Authorization: Bearer` on every call and
-re-mints the token every 45 min; shows the account nickname from `GET /api/v1/users/{sub}/profile` (never
-`/api/v1/me`, never usernames); mirrors the save document (`hs-save`: best, stats, achievements) to the
-cloud-saves slot via zip+base64 with a 2 s debounce and `pagehide` flush; and reads the leaderboard
-(read-only top 10, nicknames resolved via the profile route) when the platform exposes a `leaderboardId`.
-Achievements stay local — part of the cloud-saved doc; there is no server-authoritative unlock path for a
-pure browser game. Without a token the adapter is inert: zero `/api` calls, offline play unchanged.
+**Manifest.** `starhermit.txt` declares `name`, `launch=index.html`, `owner`, `server=server.js` (the static
+host), `version`, `contentVersion`, `cover`, and the four keyboard actions as `control.deliver=KeyD`,
+`control.hint=KeyH`, `control.restart=KeyR`, `control.clear=Escape`.
 
-**Not used today:** presence, per-game settings, `GET /api/v1/time`, achievement delivery (server-side
-unlocks) and launch activity. Realtime rooms, matchmaking, chat and voice remain deliberately out of scope:
-the ruleset is solo and asynchronous.
+**SDK.** `starhermit-sdk.js` (an unmodified copy of the shared `tools/starhermit-sdk.js`) loads first;
+`js/platform.js` (`window.HSPlatform`) calls `StarHermit.init()` and wraps it for the UI. With a launch token
+(`#game_token=` or the `#access_token=` sign-in return, stripped from the URL) the game:
+
+- renews the token through the SDK; if renewal is refused the chip disappears, a toast says the player is
+  signed out, and play continues locally;
+- shows a player chip (avatar, nickname from `GET /api/v1/users/{sub}/profile` or `Player <id>`, sync state);
+- loads the cloud-save slot `game:<slug>` remote-first on start and merges it into `hs-save` (remote wins,
+  counters by max, achievements union), then mirrors every save-doc change with a 2 s debounce and a
+  keepalive flush on `pagehide`/hidden; localStorage stays the offline cache;
+- mirrors preferences to the per-game settings KV: `sfx` (`{volume, muted}`) on Sound toggle and `gfx`
+  (the `hs-gfx` override object) on any Settings change; on start the platform values are applied over the
+  local ones;
+- resolves keyboard bindings with `StarHermit.loadBindings` and routes `keydown` by `event.code`; the
+  `<kbd>` hints on Deliver/Hint/Restart show the effective key;
+- shows an **Invite a friend** button on the title screen that copies `StarHermit.inviteLink()` and confirms
+  with a toast;
+- reads the first platform leaderboard (top 10, nicknames via the profile route) onto the title screen when
+  one exists.
+
+Served from `<id>.starhermit.com` without a token, the title shows **Sign in with StarHermit**
+(`StarHermit.signIn()`). Account strings (sign-in, invite, toasts) are localized in the nine locales in
+`js/settings.js` (`HSSettings.t`). Without a token nothing above runs and the game makes no network calls.
+
+**Not used:** `server.js` is a static host, not a platform script, so there are no server sessions,
+matchmaking, invites-to-session, chat, replays or server-written scores/achievements; the ten achievements
+stay local in the cloud-saved doc. Realtime rooms and voice are out of scope for a solo puzzler.
 
 ## 13. Technical architecture
 
-**Module boundaries.** `rng → content → rules → sfx → platform → gfx → graphics → settings → main`, loaded as
+**Module boundaries.** `starhermit-sdk → rng → content → rules → sfx → platform → gfx → graphics → settings → main`, loaded as
 `defer` scripts sharing browser globals; `rng`, `content`, `rules` and `gfx` are UMD so Node tests load the exact
 shipped code. `main.js` owns `#app`; `graphics.js` owns only its two canvases, the FPS readout and the
 `body[data-gfx-*]` attributes, and `settings.js` only its dialog; `main.js` hands rules events to
@@ -426,7 +445,9 @@ again. Each pass then opens Settings from the game header (Auto reads "detected:
 and the dialog fits the viewport), switches Low → High (checked via `body[data-gfx-preset]` and the backdrop
 canvas), overrides Shadows to Off (checked in the summary), confirms H is inert while the dialog is open and Esc
 returns focus to Settings, reloads and checks the preset and override persisted, picks Ultra (override cleared),
-turns on the frame-rate readout and plays four moves at Ultra — with zero page errors, console errors or
+turns on the frame-rate readout and plays four moves at Ultra, then checks StarHermit: standalone makes no
+`/api/v1` request and shows no account buttons, and a `#game_token=` launch against a stubbed API shows the
+nickname chip, strips the token, loads `game:<slug>` and clicking Invite a friend shows an on-screen toast — with zero page errors, console errors or
 warnings in either pass.
 
 **QA bar (agents/qa.md) as checkable statements** — all currently true:
@@ -436,8 +457,9 @@ warnings in either pass.
   touch in the browser. ✔
 - No console errors or warnings in either e2e pass. ✔
 - Text and UI are not cut off at 1280×800 or 390×844; the results card scrolls if the viewport is short. ✔
-- StarHermit launch token, account nickname, cloud-saved progress and the read-only leaderboard are wired
-  (§12); the server-validated daily leaderboard remains future work (§17). ✔
+- StarHermit launch token, sign-in, nickname/avatar, cloud-saved progress, settings KV, key bindings, invite
+  link and the read-only leaderboard are wired (§12); the server-validated daily leaderboard remains future
+  work (§17). ✔
 
 ## 15. Asset inventory
 

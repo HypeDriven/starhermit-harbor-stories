@@ -172,6 +172,19 @@ var STRINGS = {
   }
 };
 
+// StarHermit account UI (sign-in, invite link, toasts) — used by main.js via HSSettings.t().
+var SH_STRINGS = {
+  'en-US': { signIn: 'Sign in with StarHermit', invite: 'Invite a friend', copied: 'Invite link copied to clipboard.', copyFailed: 'Could not copy the invite link: {link}', signedOut: 'Signed out of StarHermit. Progress keeps saving on this device.' },
+  'en-GB': { signIn: 'Sign in with StarHermit', invite: 'Invite a friend', copied: 'Invite link copied to clipboard.', copyFailed: 'Could not copy the invite link: {link}', signedOut: 'Signed out of StarHermit. Progress keeps saving on this device.' },
+  'es-419': { signIn: 'Iniciar sesión con StarHermit', invite: 'Invitar a un amigo', copied: 'Enlace de invitación copiado al portapapeles.', copyFailed: 'No se pudo copiar el enlace de invitación: {link}', signedOut: 'Sesión de StarHermit cerrada. El progreso se sigue guardando en este dispositivo.' },
+  'es-ES': { signIn: 'Iniciar sesión con StarHermit', invite: 'Invitar a un amigo', copied: 'Enlace de invitación copiado al portapapeles.', copyFailed: 'No se ha podido copiar el enlace de invitación: {link}', signedOut: 'Se ha cerrado la sesión de StarHermit. El progreso se sigue guardando en este dispositivo.' },
+  'de-DE': { signIn: 'Mit StarHermit anmelden', invite: 'Freund einladen', copied: 'Einladungslink in die Zwischenablage kopiert.', copyFailed: 'Einladungslink konnte nicht kopiert werden: {link}', signedOut: 'Von StarHermit abgemeldet. Der Fortschritt wird weiter auf diesem Gerät gespeichert.' },
+  'fr-FR': { signIn: 'Se connecter avec StarHermit', invite: 'Inviter un ami', copied: 'Lien d’invitation copié dans le presse-papiers.', copyFailed: 'Impossible de copier le lien d’invitation : {link}', signedOut: 'Déconnecté de StarHermit. La progression reste enregistrée sur cet appareil.' },
+  'fr-CA': { signIn: 'Se connecter avec StarHermit', invite: 'Inviter un ami', copied: 'Lien d’invitation copié dans le presse-papiers.', copyFailed: 'Impossible de copier le lien d’invitation : {link}', signedOut: 'Déconnecté de StarHermit. La progression reste enregistrée sur cet appareil.' },
+  'pt-BR': { signIn: 'Entrar com StarHermit', invite: 'Convidar um amigo', copied: 'Link de convite copiado para a área de transferência.', copyFailed: 'Não foi possível copiar o link de convite: {link}', signedOut: 'Você saiu do StarHermit. O progresso continua salvo neste dispositivo.' },
+  'it-IT': { signIn: 'Accedi con StarHermit', invite: 'Invita un amico', copied: 'Link di invito copiato negli appunti.', copyFailed: 'Impossibile copiare il link di invito: {link}', signedOut: 'Disconnesso da StarHermit. I progressi restano salvati su questo dispositivo.' }
+};
+
 function pickLocale() {
   var wanted = [];
   try {
@@ -336,6 +349,11 @@ Gfx.onChange(function () {
 
 window.HSSettings = {
   open: open, close: close, isOpen: function () { return !!root; },
-  label: function () { return T.settings; }, locale: LOCALE
+  label: function () { return T.settings; }, locale: LOCALE,
+  t: function (key, vars) {
+    var str = (SH_STRINGS[LOCALE] || SH_STRINGS['en-US'])[key] || key;
+    Object.keys(vars || {}).forEach(function (k) { str = str.replace('{' + k + '}', vars[k]); });
+    return str;
+  }
 };
 })();

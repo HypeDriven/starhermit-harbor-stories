@@ -24,6 +24,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
+import { launchToken, stubStarHermit } from './starhermit-e2e.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -175,6 +176,34 @@ async function playthrough(page, tag) {
 }
 
 /** Settings → Graphics through the visible panel: presets, an override, persistence. */
+// StarHermit: standalone makes no /api calls; with a launch token the title
+// shows the nickname chip and an Invite button whose click shows a toast.
+async function platformFlow(page, tag) {
+  await step(`[${tag}] standalone makes no StarHermit calls`, async () => {
+    const hits = [];
+    page.on('request', (r) => { if (/\/api\/v1\//.test(r.url())) hits.push(r.url()); });
+    await page.goto('/', { waitUntil: 'load' });
+    await page.waitForSelector('#btn-start');
+    if (await page.locator('#btn-invite, #btn-signin').count()) throw new Error('account buttons shown standalone');
+    await page.waitForTimeout(200);
+    if (hits.length) throw new Error('standalone fetched ' + hits.join(', '));
+  });
+  await step(`[${tag}] launch token: nickname chip, invite link toast`, async () => {
+    const calls = await stubStarHermit(page);
+    await page.goto('/index.html#game_token=' + launchToken(), { waitUntil: 'load' });
+    await page.waitForFunction(() => /Al/.test(document.querySelector('.hs-player-name')?.textContent || ''));
+    if (page.url().includes('game_token')) throw new Error('token left in URL');
+    await page.click('#btn-invite');
+    const toast = page.locator('#hs-toast');
+    await toast.waitFor({ state: 'visible' });
+    const box = await toast.boundingBox();
+    const vp = page.viewportSize();
+    if (box.x < 0 || box.x + box.width > vp.width + 1) throw new Error('toast cut off');
+    if (!calls.some((c) => c.includes('/cloud-saves/game%3Agid-1'))) throw new Error('no cloud-save load: ' + calls.join(', '));
+    await page.unroute(/\/api\/v1\//);
+  });
+}
+
 async function graphicsFlow(page, tag) {
   const shot = (n) => `/tmp/harbor-stories-e2e-${n}-${tag}.png`;
   const body = (attr) => page.getAttribute('body', attr);
@@ -279,6 +308,7 @@ try {
     { tag: 'mobile', viewport: { width: 390, height: 844 }, hasTouch: true },
   ]) {
     const context = await browser.newContext({ viewport: pass.viewport, hasTouch: pass.hasTouch, baseURL });
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
@@ -288,6 +318,7 @@ try {
     try {
       await playthrough(page, pass.tag);
       await graphicsFlow(page, pass.tag);
+      await platformFlow(page, pass.tag);
     } catch (err) {
       if (errors.length) console.error(`page errors during ${pass.tag} pass:\n` + errors.join('\n'));
       throw err;

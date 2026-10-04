@@ -29,6 +29,49 @@ function settingsButton(extra) {
   return window.HSSettings ? '<button id="btn-settings" class="hs-btn secondary' + (extra || '') + '" type="button">' +
     escapeHtml(settingsLabel()) + '</button>' : '';
 }
+function t(key, vars) { return window.HSSettings ? window.HSSettings.t(key, vars) : key; }
+var P = window.HSPlatform || null;
+
+// ---------- keyboard bindings (StarHermit controls; defaults mirror starhermit.txt) ----------
+var DEFAULT_BINDINGS = { deliver: ['KeyD'], hint: ['KeyH'], restart: ['KeyR'], clear: ['Escape'] };
+var bindings = JSON.parse(JSON.stringify(DEFAULT_BINDINGS));
+function codeLabel(code) {
+  if (!code) return '';
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  if (/^Digit\d$/.test(code)) return code.slice(5);
+  if (code === 'Escape') return 'Esc';
+  return code.replace(/^Arrow/, '');
+}
+function keyHint(action) { var c = (bindings[action] || [])[0]; return c ? ' <kbd>' + escapeHtml(codeLabel(c)) + '</kbd>' : ''; }
+function actionFor(code) {
+  var found = null;
+  Object.keys(bindings).forEach(function (a) { if (!found && bindings[a].indexOf(code) !== -1) found = a; });
+  return found;
+}
+
+// ---------- toast ----------
+var toastTimer = null;
+function toast(msg) {
+  var el = document.getElementById('hs-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'hs-toast';
+    el.className = 'hs-toast';
+    el.setAttribute('role', 'status');
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.hidden = false;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { el.hidden = true; }, 3500);
+}
+function inviteFriend() {
+  if (!P) return;
+  P.copyInvite().then(function (ok) {
+    toast(ok ? t('copied') : t('copyFailed', { link: P.inviteLink() || '' }));
+  });
+}
+
 function wireSettings() {
   var b = document.getElementById('btn-settings');
   if (b) b.addEventListener('click', function () { window.HSSettings.open(); });
@@ -141,6 +184,7 @@ function playerChipHtml() {
   var labels = { loading: 'Loading…', saving: 'Saving…', synced: 'Synced', error: 'Sync error', offline: 'Offline' };
   var sync = window.HSPlatform.syncStatus();
   return '<div class="hs-player" role="status">' +
+    (window.HSPlatform.avatarUrl() ? '<img class="hs-avatar" src="' + escapeHtml(window.HSPlatform.avatarUrl()) + '" alt="">' : '') +
     '<span class="hs-sync-dot hs-sync-' + sync + '" aria-hidden="true"></span>' +
     '<span class="hs-player-name">' + escapeHtml(window.HSPlatform.displayName() || 'Player') + '</span>' +
     '<span class="hs-sync-label">' + (labels[sync] || sync) + '</span></div>';
@@ -166,9 +210,16 @@ function showTitle() {
     (best ? '<p class="hs-best">Best score <b>' + best + '</b></p>' : '') +
     playerChipHtml() +
     '<div class="hs-title-actions"><button id="btn-start" class="hs-btn" type="button">Play</button>' +
-    settingsButton() + '</div>' +
+    settingsButton() +
+    (P && P.isOnline() ? '<button id="btn-invite" class="hs-btn secondary" type="button">' + escapeHtml(t('invite')) + '</button>' : '') +
+    (P && P.canSignIn() ? '<button id="btn-signin" class="hs-btn secondary" type="button">' + escapeHtml(t('signIn')) + '</button>' : '') +
+    '</div>' +
     leaderboardHtml() + '</section></main>';
   document.getElementById('btn-start').addEventListener('click', startGame);
+  var inv = document.getElementById('btn-invite');
+  if (inv) inv.addEventListener('click', inviteFriend);
+  var sin = document.getElementById('btn-signin');
+  if (sin) sin.addEventListener('click', function () { P.signIn(); });
   wireSettings();
 }
 
@@ -289,6 +340,7 @@ function toggleSound() {
   window.HSSfx.unlock();
   var muted = window.HSSfx.toggleMute();
   statusText = muted ? 'Sound off.' : 'Sound on.';
+  pushSoundSettings();
   renderGame();
 }
 
@@ -345,9 +397,9 @@ function renderGame() {
     settingsButton(' hs-settings-btn') + '</div>' +
     playerChipHtml() + '</header>' +
     '<section class="hs-layout"><aside><h2>Restoration tasks</h2><ul class="hs-tasks">' + renderTasks() + '</ul>' +
-    '<div class="hs-actions"><button id="btn-deliver" class="hs-btn" type="button">Deliver selected <kbd>D</kbd></button>' +
-    '<button id="btn-hint" class="hs-btn secondary" type="button">Hint <kbd>H</kbd></button>' +
-    '<button id="btn-restart" class="hs-btn secondary" type="button">Restart <kbd>R</kbd></button>' +
+    '<div class="hs-actions"><button id="btn-deliver" class="hs-btn" type="button">Deliver selected' + keyHint('deliver') + '</button>' +
+    '<button id="btn-hint" class="hs-btn secondary" type="button">Hint' + keyHint('hint') + '</button>' +
+    '<button id="btn-restart" class="hs-btn secondary" type="button">Restart' + keyHint('restart') + '</button>' +
     '<button id="btn-sound" class="hs-btn secondary" type="button" aria-pressed="' + (!muted) + '">Sound: ' +
     (muted ? 'off' : 'on') + '</button></div></aside>' +
     '<section class="hs-board-wrap"><p id="hs-status" class="hs-status" role="status">' + statusText + '</p>' +
@@ -370,12 +422,12 @@ function renderGame() {
 document.addEventListener('keydown', function (event) {
   if (!state || event.altKey || event.ctrlKey || event.metaKey) return;
   if (window.HSSettings && window.HSSettings.isOpen()) return;
-  var k = event.key.toLowerCase();
-  if (k === 'r') { event.preventDefault(); startGame(); return; }
+  var k = actionFor(event.code);
+  if (k === 'restart') { event.preventDefault(); startGame(); return; }
   if (state.terminal) return;
-  if (k === 'd') { event.preventDefault(); deliver(); }
-  else if (k === 'h') { event.preventDefault(); showHint(); }
-  else if (event.key === 'Escape' && selected) {
+  if (k === 'deliver') { event.preventDefault(); deliver(); }
+  else if (k === 'hint') { event.preventDefault(); showHint(); }
+  else if (k === 'clear' && selected) {
     event.preventDefault();
     selected = null;
     statusText = 'Selection cleared.';
@@ -383,16 +435,48 @@ document.addEventListener('keydown', function (event) {
   }
 });
 
-if (window.HSPlatform) {
-  window.HSPlatform.onUpdate(function () {
-    if (state) renderGame(); else showTitle();
+// ---------- player preferences mirrored to the StarHermit settings KV ----------
+var lastGfx = window.HSGfx ? JSON.stringify(window.HSGfx.settings()) : null;
+function pushSoundSettings() {
+  if (P && window.HSSfx) P.patchSettings({ sfx: { volume: window.HSSfx.getVolume(), muted: window.HSSfx.isMuted() } });
+}
+if (window.HSGfx) {
+  window.HSGfx.onChange(function () {
+    var now = JSON.stringify(window.HSGfx.settings());
+    if (now === lastGfx) return;
+    lastGfx = now;
+    if (P) P.patchSettings({ gfx: window.HSGfx.settings() });
   });
-  if (window.HSPlatform.isOnline()) {
-    window.HSPlatform.loadCloudSave().then(function (remote) {
+}
+function applyRemoteSettings(s) {
+  if (!s) return;
+  if (s.sfx && window.HSSfx) {
+    if (typeof s.sfx.volume === 'number') window.HSSfx.setVolume(s.sfx.volume);
+    if (typeof s.sfx.muted === 'boolean') window.HSSfx.setMuted(s.sfx.muted);
+  }
+  if (s.gfx && typeof s.gfx === 'object' && window.HSGfx) {
+    lastGfx = JSON.stringify(s.gfx);
+    window.HSGfx.set(s.gfx);
+  }
+}
+
+function rerender() { if (state) renderGame(); else showTitle(); }
+
+if (P) {
+  var wasOnline = P.isOnline();
+  P.onUpdate(function () {
+    if (wasOnline && !P.isOnline()) toast(t('signedOut'));
+    wasOnline = P.isOnline();
+    rerender();
+  });
+  P.loadBindings(DEFAULT_BINDINGS).then(function (b) { bindings = b; rerender(); });
+  if (P.isOnline()) {
+    P.getSettings().then(function (s) { applyRemoteSettings(s); rerender(); });
+    P.loadCloudSave().then(function (remote) {
       if (mergeRemoteSave(remote)) persistSave();
-      if (state) renderGame(); else showTitle();
+      rerender();
     });
-    window.HSPlatform.refreshLeaderboard();
+    P.refreshLeaderboard();
   }
 }
 

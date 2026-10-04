@@ -6,3 +6,7 @@ server=server.js
 version=1.0.0
 contentVersion=1
 cover=cover.jpg
+control.deliver=KeyD | Deliver selected
+control.hint=KeyH | Hint
+control.restart=KeyR | Restart
+control.clear=Escape | Clear selection

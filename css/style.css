@@ -225,3 +225,6 @@ body[data-gfx-shadows="high"] .hs-icon, body[data-gfx-bloom="on"] .hs-icon {
   body[data-gfx-detail="detailed"][data-gfx-motion="full"] .hs-cell.selected .hs-icon { animation: hs-bob 1.6s ease-in-out infinite; }
   @keyframes hs-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 }
+.hs-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; flex: none; }
+.hs-toast { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 60; max-width: calc(100vw - 32px); padding: 10px 16px; border-radius: 12px; background: var(--hs-panel); color: inherit; font-size: 14px; box-shadow: 0 6px 24px rgba(0,0,0,.35); overflow-wrap: anywhere; }
+.hs-toast[hidden] { display: none; }
