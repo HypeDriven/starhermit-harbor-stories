@@ -438,18 +438,19 @@ function burst(kind, at, chain) {
   var rect = el.getBoundingClientRect();
   var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
   var n = (q.particles === 'high' ? 26 : 12) * (kind === 'task' ? 2 : 1);
+  var k = (window.UIScale && window.UIScale.value) || 1; // sparks grow with the zoomed UI on large screens
   var col = kind === 'merge' ? [255, 200, 110] : hexRgb(chain);
   for (var i = 0; i < n; i++) {
     var a = Math.random() * Math.PI * 2;
-    var sp = (kind === 'deliver' ? 40 : 90) + Math.random() * (kind === 'task' ? 220 : 120);
+    var sp = ((kind === 'deliver' ? 40 : 90) + Math.random() * (kind === 'task' ? 220 : 120)) * k;
     particles.push({
       x: cx + Math.cos(a) * rect.width * 0.2, y: cy + Math.sin(a) * rect.height * 0.2,
-      vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - (kind === 'merge' ? 40 : 110),
-      life: 0, max: 0.5 + Math.random() * 0.45, r: 1.2 + Math.random() * 2.2,
+      vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - (kind === 'merge' ? 40 : 110) * k,
+      life: 0, max: 0.5 + Math.random() * 0.45, r: (1.2 + Math.random() * 2.2) * k, k: k,
       c: Math.random() < 0.3 ? [255, 236, 190] : col
     });
   }
-  if (kind !== 'merge') particles.push({ ring: true, x: cx, y: cy, life: 0, max: 0.55, r: rect.width * 0.35, c: col });
+  if (kind !== 'merge') particles.push({ ring: true, x: cx, y: cy, life: 0, max: 0.55, r: rect.width * 0.35, c: col, k: k });
   kick();
 }
 
@@ -478,13 +479,13 @@ function drawParticles(dt) {
     var col = 'rgba(' + p.c[0] + ',' + p.c[1] + ',' + p.c[2] + ',';
     if (p.ring) {
       x.strokeStyle = col + (0.6 * k).toFixed(3) + ')';
-      x.lineWidth = 2 + 3 * k;
+      x.lineWidth = (2 + 3 * k) * (p.k || 1);
       x.beginPath();
       x.arc(p.x, p.y, p.r * (1 + (1 - k) * 1.2), 0, 6.2832);
       x.stroke();
       return true;
     }
-    p.vy += 160 * s;
+    p.vy += 160 * (p.k || 1) * s;
     p.vx *= 1 - 1.8 * s;
     p.x += p.vx * s;
     p.y += p.vy * s;

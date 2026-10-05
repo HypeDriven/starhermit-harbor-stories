@@ -230,6 +230,10 @@ falls back to `<body>` mid-game.
 - **Both.** `viewport-fit=cover` in `index.html` and `min-height: 100dvh` on the game keep the layout clear of
   browser chrome; the results card is `min(92vw, 520px)` with `overflow: auto` on its backdrop, so on a short
   landscape phone the headline, score and Play again button are always reachable.
+- **Large screens.** `ui-scale.js` sets `--ui-scale` on `<html>` (1 up to a 1600×1000 viewport, then the smaller
+  of width/1600 and height/1000, capped at 2.5); `#app`, the Settings dialog, the toast and the frame-rate badge
+  are CSS-`zoom`ed by it with their vh/vw lengths divided by it, so the whole layout grows proportionally. The
+  full-viewport backdrop/particle canvases are not zoomed; merge/deliver sparks scale their size and speed by it.
 
 Nothing is allowed to be cut off: cell labels use `overflow-wrap: anywhere` and a `clamp()` font, the score
 pill un-sets `white-space: nowrap` under 700 px, and the board is `minmax(0, 1fr)` per column so it shrinks

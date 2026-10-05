@@ -19,7 +19,11 @@ body {
   font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
 }
 
-.hs-app { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+/* Large screens: UI layers zoom by --ui-scale (ui-scale.js, 1 up to 1600x1000); vh/vw inside them are divided by it.
+   The full-viewport graphics canvases (#hs-gfx-bg/#hs-gfx-fx) are not zoomed. */
+#app, body > .hs-settings-backdrop, .hs-toast, #hs-fps { zoom: var(--ui-scale, 1); }
+
+.hs-app { min-height: calc(100vh / var(--ui-scale, 1)); display: flex; align-items: center; justify-content: center; }
 
 .hs-title-screen { text-align: center; padding: 48px 24px; max-width: 900px; }
 .hs-key-art { display: block; width: min(100%, 760px); aspect-ratio: 1200 / 672; object-fit: cover; margin: 0 auto 24px; border-radius: 18px; box-shadow: 0 18px 48px rgba(0,0,0,.5), 0 0 0 1px rgba(255,184,77,.18); }
@@ -36,7 +40,7 @@ body {
 .hs-best { color: var(--hs-muted); font-size: 15px; margin-bottom: 8px; }
 .hs-btn kbd { font: inherit; font-size: .82em; opacity: .7; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; margin-left: 6px; }
 
-.hs-game { min-height: 100dvh; padding: clamp(12px, 2vw, 28px); max-width: 1280px; margin: 0 auto; }
+.hs-game { min-height: calc(100dvh / var(--ui-scale, 1)); padding: clamp(12px, calc(2vw / var(--ui-scale, 1)), 28px); max-width: 1280px; margin: 0 auto; }
 .hs-game > header { display: flex; gap: 16px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .hs-game h1, .hs-game h2, .hs-game p { margin-top: 0; }
 .hs-game header h1 { color: var(--hs-accent); margin-bottom: 2px; }
@@ -64,23 +68,23 @@ body {
 .hs-actions .hs-btn { margin: 0; padding: 9px 14px; }
 .hs-btn.secondary { background: #dae5f8; }
 .hs-status { min-height: 1.5em; color: var(--hs-muted); }
-.hs-board { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: clamp(5px, 1vw, 10px); padding: clamp(6px, 1vw, 12px); border-radius: 14px; background: #2b2018 url("../assets/dock-planks.webp") center / 256px repeat; box-shadow: inset 0 0 0 1px rgba(0,0,0,.35), inset 0 0 40px rgba(0,0,0,.45); }
+.hs-board { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: clamp(5px, calc(1vw / var(--ui-scale, 1)), 10px); padding: clamp(6px, calc(1vw / var(--ui-scale, 1)), 12px); border-radius: 14px; background: #2b2018 url("../assets/dock-planks.webp") center / 256px repeat; box-shadow: inset 0 0 0 1px rgba(0,0,0,.35), inset 0 0 40px rgba(0,0,0,.45); }
 .hs-cell { min-width: 0; aspect-ratio: 1; border: 2px solid #39465f; border-radius: 12px; background: rgba(17,26,41,.92); color: var(--hs-muted); cursor: pointer; padding: 5px; display: grid; place-content: center; gap: 4px; overflow: hidden; }
-.hs-cell > span:last-child { font-size: clamp(9px, 1.2vw, 13px); overflow-wrap: anywhere; }
+.hs-cell > span:last-child { font-size: clamp(9px, calc(1.2vw / var(--ui-scale, 1)), 13px); overflow-wrap: anywhere; }
 .hs-cell.occupied { color: var(--hs-text); background: #253248; }
 .hs-cell.selected { border-color: var(--hs-accent); box-shadow: 0 0 0 2px rgba(255,184,77,.25); }
 .hs-cell:focus-visible, .hs-btn:focus-visible { outline: 3px solid white; outline-offset: 2px; }
-.hs-icon { font-size: clamp(20px, 3.4vw, 38px); line-height: 1; position: relative; }
+.hs-icon { font-size: clamp(20px, calc(3.4vw / var(--ui-scale, 1)), 38px); line-height: 1; position: relative; }
 /* tier badge: the persistent tier distinction, visible even when names are hidden */
 .hs-tier { position: absolute; right: -0.35em; bottom: -0.25em; font: 700 11px/1 system-ui, sans-serif; color: #111a29; background: var(--hs-accent); border-radius: 999px; padding: 2px 5px; min-width: 1em; text-align: center; }
 .hs-cell { position: relative; }
 /* the board fits the viewport height so tasks/actions and the lowest rows stay co-visible */
-.hs-board { width: min(100%, calc((100dvh - 210px) * var(--cols, 6) / var(--rows, 6))); margin: 0 auto; }
+.hs-board { width: min(100%, calc((calc(100dvh / var(--ui-scale, 1)) - 210px) * var(--cols, 6) / var(--rows, 6))); margin: 0 auto; }
 .hs-terminal { position: fixed; inset: 0; background: rgba(8,12,20,.9); display: grid; place-items: center; text-align: center; z-index: 5; padding: 16px; overflow: auto; }
-.hs-terminal-card { width: min(92vw, 520px); padding: 16px 20px 20px; border-radius: 18px; background: var(--hs-panel); box-shadow: 0 24px 64px rgba(0,0,0,.6), 0 0 0 1px rgba(255,184,77,.2); }
+.hs-terminal-card { width: min(calc(92vw / var(--ui-scale, 1)), 520px); padding: 16px 20px 20px; border-radius: 18px; background: var(--hs-panel); box-shadow: 0 24px 64px rgba(0,0,0,.6), 0 0 0 1px rgba(255,184,77,.2); }
 .hs-terminal-card > .hs-btn { width: 100%; }
 .hs-terminal h2 { margin: 12px 0 4px; color: var(--hs-accent); }
-.hs-result-art { display: block; width: 100%; max-height: 34dvh; aspect-ratio: 640 / 400; object-fit: cover; margin: 0 auto; border-radius: 14px; box-shadow: 0 14px 40px rgba(0,0,0,.55); }
+.hs-result-art { display: block; width: 100%; max-height: calc(34dvh / var(--ui-scale, 1)); aspect-ratio: 640 / 400; object-fit: cover; margin: 0 auto; border-radius: 14px; box-shadow: 0 14px 40px rgba(0,0,0,.55); }
 @media (prefers-reduced-motion: no-preference) {
   .hs-key-art, .hs-result-art { animation: hs-fade-in .5s ease-out both; }
   @keyframes hs-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -90,7 +94,7 @@ body {
   .hs-title-screen { padding: 24px 16px; }
   .hs-key-art { border-radius: 12px; margin-bottom: 16px; }
   .hs-board { padding: 6px; border-radius: 10px; }
-  .hs-title-name { font-size: clamp(38px, 12vw, 56px); }
+  .hs-title-name { font-size: clamp(38px, calc(12vw / var(--ui-scale, 1)), 56px); }
   .hs-game > header { align-items: flex-start; flex-direction: column; }
   .hs-score { white-space: normal; }
   .hs-player { white-space: normal; }
@@ -115,7 +119,7 @@ body {
   .hs-tasks span { font-size: 12px; margin-top: 2px; }
   .hs-actions .hs-btn { padding: 6px 10px; min-height: 40px; }
   .hs-status { min-height: 1.2em; font-size: 13px; }
-  .hs-board { width: min(100%, calc((100dvh - 120px) * var(--cols, 6) / var(--rows, 6))); gap: 4px; padding: 5px; }
+  .hs-board { width: min(100%, calc((calc(100dvh / var(--ui-scale, 1)) - 120px) * var(--cols, 6) / var(--rows, 6))); gap: 4px; padding: 5px; }
   .hs-cell > span:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 }
 
@@ -125,7 +129,7 @@ body {
 .hs-header-tools { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
 .hs-header-tools .hs-settings-btn { margin: 0; padding: 9px 14px; font-size: 15px; white-space: nowrap; }
 .hs-settings-backdrop { position: fixed; inset: 0; z-index: 20; background: rgba(8,12,20,.78); display: grid; place-items: center; padding: 16px; overflow: auto; }
-.hs-settings { width: min(100%, 560px); max-height: calc(100dvh - 32px); overflow: auto; padding: 16px 20px 18px; border-radius: 18px; background: var(--hs-panel); box-shadow: 0 24px 64px rgba(0,0,0,.6), 0 0 0 1px rgba(255,184,77,.2); }
+.hs-settings { width: min(100%, 560px); max-height: calc(calc(100dvh / var(--ui-scale, 1)) - 32px); overflow: auto; padding: 16px 20px 18px; border-radius: 18px; background: var(--hs-panel); box-shadow: 0 24px 64px rgba(0,0,0,.6), 0 0 0 1px rgba(255,184,77,.2); }
 .hs-settings-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .hs-settings-head h2 { margin: 0; color: var(--hs-accent); font-size: 22px; }
 .hs-settings-head .hs-btn { margin: 0; padding: 8px 16px; font-size: 15px; }
@@ -226,5 +230,5 @@ body[data-gfx-shadows="high"] .hs-icon, body[data-gfx-bloom="on"] .hs-icon {
   @keyframes hs-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 }
 .hs-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; flex: none; }
-.hs-toast { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 60; max-width: calc(100vw - 32px); padding: 10px 16px; border-radius: 12px; background: var(--hs-panel); color: inherit; font-size: 14px; box-shadow: 0 6px 24px rgba(0,0,0,.35); overflow-wrap: anywhere; }
+.hs-toast { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 60; max-width: calc(calc(100vw / var(--ui-scale, 1)) - 32px); padding: 10px 16px; border-radius: 12px; background: var(--hs-panel); color: inherit; font-size: 14px; box-shadow: 0 6px 24px rgba(0,0,0,.35); overflow-wrap: anywhere; }
 .hs-toast[hidden] { display: none; }
