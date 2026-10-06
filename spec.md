@@ -229,7 +229,7 @@ falls back to `<body>` mid-game.
   the glyph — the board stays square at 390 px wide.
 - **Both.** `viewport-fit=cover` in `index.html` and `min-height: 100dvh` on the game keep the layout clear of
   browser chrome; the results card is `min(92vw, 520px)` with `overflow: auto` on its backdrop, so on a short
-  landscape phone the headline, score and Play again button are always reachable.
+  landscape phone the headline, score and Play again button are always reachable. On a short landscape phone the title shrinks its key art (30 dvh tall) so Play and Settings fit without scrolling.
 - **Large screens.** `ui-scale.js` sets `--ui-scale` on `<html>` (1 up to a 1600×1000 viewport, then the smaller
   of width/1600 and height/1000, capped at 2.5); `#app`, the Settings dialog, the toast and the frame-rate badge
   are CSS-`zoom`ed by it with their vh/vw lengths divided by it, so the whole layout grows proportionally. The

@@ -108,6 +108,10 @@ body {
 }
 /* short landscape: board beside a compact task/action column, no scrolling */
 @media (max-height: 500px) and (orientation: landscape) {
+  /* title: a shorter key-art band keeps Play and Settings above the fold */
+  .hs-key-art { width: auto; max-width: 100%; height: calc(30dvh / var(--ui-scale, 1)); margin-bottom: 8px; }
+  .hs-title-screen { padding: 10px 16px; }
+  .hs-title-name { font-size: 32px; margin-bottom: 6px; }
   .hs-game { padding: 6px 10px; }
   .hs-game > header { margin-bottom: 4px; gap: 8px; }
   .hs-layout { grid-template-columns: minmax(200px, 0.6fr) minmax(0, 2fr); gap: 8px; }
