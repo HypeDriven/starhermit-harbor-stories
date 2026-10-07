@@ -2,7 +2,7 @@
  * A thin layer over the shared SDK (starhermit-sdk.js, window.StarHermit):
  * launch token + renewal, sign-in, account nickname/avatar, the cloud-save
  * slot, the per-player settings KV, keyboard bindings, the invite link and the
- * read-only leaderboard. Everything is inert without a token: standalone play
+ * high-score leaderboard (post a finished run, read the top 10). Everything is inert without a token: standalone play
  * makes zero network calls. See spec.md §12.
  */
 (function () {
@@ -49,10 +49,10 @@ function flushSave(keepalive) {
   SH.flushSave(keepalive === true);
 }
 
-// ---------- leaderboard: read-only ----------
+// ---------- leaderboard: top 10 for the title screen ----------
 function loadLeaderboard() {
   if (!online()) return Promise.resolve(null);
-  return SH.leaderboard().then(function (data) {
+  return SH.leaderboard('high-score').then(function (data) {
     var entries = (data && data.items) || [];
     if (!entries.length) return null;
     return Promise.all(entries.map(function (e) {
@@ -61,6 +61,20 @@ function loadLeaderboard() {
       });
     })).then(function (list) { leaderboardCache = list; notify(); return list; });
   }).catch(function () { return null; });
+}
+
+// ---------- leaderboard: post a finished run (score-script.js) ----------
+// Resolves { posted, rank } — rank on the high-score board, or null.
+function submitScore(total) {
+  if (!online()) return Promise.resolve({ posted: false, rank: null });
+  return SH.submitScores({ 'high-score': total }).then(function (keys) {
+    if (!keys || keys.indexOf('high-score') < 0) return { posted: false, rank: null };
+    loadLeaderboard();
+    return SH.leaderboard('high-score', { pageSize: 100 }).then(function (r) {
+      var me = (r.items || []).filter(function (i) { return String(i.userId) === String(SH.userId); })[0];
+      return { posted: true, rank: me ? me.rank : null };
+    }, function () { return { posted: true, rank: null }; });
+  }, function () { return { posted: false, rank: null }; });
 }
 
 // ---------- settings KV ----------
@@ -110,6 +124,7 @@ window.HSPlatform = {
   inviteLink: inviteLink,
   copyInvite: copyInvite,
   getLeaderboard: function () { return leaderboardCache; },
-  refreshLeaderboard: loadLeaderboard
+  refreshLeaderboard: loadLeaderboard,
+  submitScore: submitScore
 };
 })();

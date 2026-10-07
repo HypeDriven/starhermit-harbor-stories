@@ -38,6 +38,7 @@ body {
 
 .hs-noscript { text-align: center; padding: 24px; color: var(--hs-muted); }
 .hs-best { color: var(--hs-muted); font-size: 15px; margin-bottom: 8px; }
+.hs-lb-line { color: var(--hs-muted); font-size: 15px; margin: 0 0 10px; overflow-wrap: anywhere; }
 .hs-btn kbd { font: inherit; font-size: .82em; opacity: .7; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; margin-left: 6px; }
 
 .hs-game { min-height: calc(100dvh / var(--ui-scale, 1)); padding: clamp(12px, calc(2vw / var(--ui-scale, 1)), 28px); max-width: 1280px; margin: 0 auto; }

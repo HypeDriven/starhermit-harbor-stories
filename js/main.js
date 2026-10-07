@@ -223,7 +223,22 @@ function showTitle() {
   wireSettings();
 }
 
+// Signed in only: post the finished run's score and show the board rank on
+// the end card (re-rendered when the answer arrives).
+var lbText = null;
+function postToLeaderboard(run) {
+  var P = window.HSPlatform;
+  if (!P || !P.isOnline()) { lbText = null; return; }
+  lbText = t('lbPosting');
+  P.submitScore(run.score.total).then(function (r) {
+    if (state !== run) return;
+    lbText = !r.posted ? t('lbNotPosted') : r.rank ? t('lbRank', { rank: r.rank }) : t('lbPosted');
+    renderGame();
+  });
+}
+
 function startGame() {
+  lbText = null;
   if (window.HSSfx) { window.HSSfx.unlock(); window.HSSfx.uiStart(); }
   state = Rules.createGame(Content.JOURNEY[0]);
   selected = null;
@@ -291,7 +306,7 @@ function apply(command) {
       unlocked.map(function (a) { return a.name; }).join(', ') + '.';
   }
   selected = null;
-  if (state.terminal) recordBest(state.score.total);
+  if (state.terminal) { recordBest(state.score.total); postToLeaderboard(state); }
   return true;
 }
 
@@ -390,6 +405,7 @@ function renderGame() {
     '<h2 id="hs-terminal-title">' + (state.terminal.won ? 'Harbor restored!' : 'Round over') + '</h2>' +
     '<p>Score ' + state.score.total + '</p>' +
     (best ? '<div class="hs-best">Best ' + best + '</div>' : '') +
+    (lbText ? '<p id="hs-lb" class="hs-lb-line" aria-live="polite">' + escapeHtml(lbText) + '</p>' : '') +
     '<button id="btn-again" class="hs-btn" type="button">Play again</button></div></div>' : '';
   var muted = window.HSSfx ? window.HSSfx.isMuted() : true;
   app().innerHTML = '<main class="hs-game"><header><div><h1>Harbor Stories</h1><p>' + (cfg.name || '') + '</p></div>' +

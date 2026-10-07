@@ -37,7 +37,8 @@ restoration jobs that bring a fog-bound harbor town back to life.
 | `js/graphics.js` | `window.HSGfx`. GPU detection, backdrop canvas `#hs-gfx-bg`, particle canvas `#hs-gfx-fx`, `body[data-gfx-*]` attributes, frame loop, adaptive resolution, FPS readout, `localStorage['hs-gfx']`. |
 | `js/settings.js` | `window.HSSettings`. The Settings dialog (Graphics section) and its strings in nine locales. |
 | `js/main.js` | The whole UI: title screen, game render, click/key handlers, status line, best-score store. |
-| `server.js` | 72-line static file server (`PORT`, default 8080), traversal guard, MIME table incl. `.webp`/`.opus`. |
+| `score-script.js` | StarHermit platform script (`server=`): range-checks a finished run's score and posts it to the `high-score` board (canonical copy in the games repo's `tools/score-script.js`). |
+| `server.js` | Local dev server: 72-line static file server (`PORT`, default 8080), traversal guard, MIME table incl. `.webp`/`.opus`. |
 | `tests/rules.test.mjs` | `npm test` — 12 `node --test` cases over the rules contract. |
 | `tests/gfx.test.mjs` | `npm test` — 6 `node --test` cases over the graphics quality model. |
 | `tests/platform.test.mjs` | `npm test` — 3 cases: launch token, profile, cloud save `game:<slug>`, settings KV, bindings, invite link; standalone makes no fetch. |
@@ -366,8 +367,8 @@ status line reserved at `min-height: 1.5em`, so a 30 % longer German string refl
 
 ## 12. StarHermit integration
 
-**Manifest.** `starhermit.txt` declares `name`, `launch=index.html`, `owner`, `server=server.js` (the static
-host), `version`, `contentVersion`, `cover`, and the four keyboard actions as `control.deliver=KeyD`,
+**Manifest.** `starhermit.txt` declares `name`, `launch=index.html`, `owner`, `server=score-script.js` (the
+leaderboard script; `server.js` stays the local static host), `version`, `contentVersion`, `cover`, and the four keyboard actions as `control.deliver=KeyD`,
 `control.hint=KeyH`, `control.restart=KeyR`, `control.clear=Escape`.
 
 **SDK.** `starhermit-sdk.js` (an unmodified copy of the shared `tools/starhermit-sdk.js`) loads first;
@@ -387,15 +388,18 @@ host), `version`, `contentVersion`, `cover`, and the four keyboard actions as `c
   `<kbd>` hints on Deliver/Hint/Restart show the effective key;
 - shows an **Invite a friend** button on the title screen that copies `StarHermit.inviteLink()` and confirms
   with a toast;
-- reads the first platform leaderboard (top 10, nicknames via the profile route) onto the title screen when
-  one exists.
+- posts every finished run's score (won or not) through `StarHermit.submitScores` — a practice session whose
+  `score-script.js` posts it to the `high-score` board (integer, higher is better, 0–100,000) — and the end
+  card shows "Leaderboard rank: #N" (or posted / not posted) under the best score;
+- reads the `high-score` leaderboard (top 10, nicknames via the profile route) onto the title screen when
+  it has entries.
 
 Served from `<id>.starhermit.com` without a token, the title shows **Sign in with StarHermit**
-(`StarHermit.signIn()`). Account strings (sign-in, invite, toasts) are localized in the nine locales in
+(`StarHermit.signIn()`). Account strings (sign-in, invite, toasts, the end card's leaderboard line) are localized in the nine locales in
 `js/settings.js` (`HSSettings.t`). Without a token nothing above runs and the game makes no network calls.
 
-**Not used:** `server.js` is a static host, not a platform script, so there are no server sessions,
-matchmaking, invites-to-session, chat, replays or server-written scores/achievements; the ten achievements
+**Not used:** server sessions beyond the score post, matchmaking, invites-to-session, chat, replays and
+platform achievements; the ten achievements
 stay local in the cloud-saved doc. Realtime rooms and voice are out of scope for a solo puzzler.
 
 ## 13. Technical architecture
@@ -462,8 +466,8 @@ warnings in either pass.
 - No console errors or warnings in either e2e pass. ✔
 - Text and UI are not cut off at 1280×800 or 390×844; the results card scrolls if the viewport is short. ✔
 - StarHermit launch token, sign-in, nickname/avatar, cloud-saved progress, settings KV, key bindings, invite
-  link and the read-only leaderboard are wired (§12); the server-validated daily leaderboard remains future
-  work (§17). ✔
+  link and the high-score leaderboard (post + rank + title top 10) are wired (§12); the server-validated daily
+  leaderboard remains future work (§17). ✔
 
 ## 15. Asset inventory
 
@@ -490,8 +494,8 @@ Kimodo would produce assets with nowhere to live.
    tutorial exist as tested data with no UI entry point.
 2. No localization beyond the Settings dialog — game strings are English literals, against a nine-locale requirement.
 3. StarHermit usage stops at the launch token, profile nickname, cloud save mirror, local achievements and
-   the read-only leaderboard (§12): scores are never submitted, so leaderboard entries only appear if the
-   platform seeds them, and `GET /api/v1/time` is unused.
+   the high-score leaderboard (§12); `score-script.js` only range-checks the submitted score (no replay
+   validation), and `GET /api/v1/time` is unused.
 4. `Content.ACHIEVEMENTS` unlocks locally into the save doc (announced in the status line) but is never
    delivered to a server-side catalog — browser titles have no entitlement for that.
 5. `cfg.mechanics.undo` is set on most content and tutorial lesson 5 teaches undo, but the engine has no undo
@@ -516,8 +520,8 @@ Kimodo would produce assets with nowhere to live.
 - **StarHermit wiring:** done — launch-token scope (fragment read, 45-min refresh), cloud-saved progression,
   idempotent local achievement unlocks for the ten declared keys (carried in the save doc). Still future:
   `GET /api/v1/time` for the daily UTC boundary and a daily leaderboard validated server-side by replaying
-  the command log against `rules.js` (`hashState` is already the checksum); clients cannot submit scores, so
-  that validation must live in a Jint game script, not this static host.
+  the command log against `rules.js` (`hashState` is already the checksum); that validation must live in the Jint
+  game script (`score-script.js` today only range-checks).
 - **Undo** as a real command (`mechanics.undo`), with the U key and lesson 5's goal event.
 - **Theming:** drive the board's plank tint and cell colours from the active `THEMES` palette and offer the
   `colorHC` high-contrast set as an accessibility option.
