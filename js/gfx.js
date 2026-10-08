@@ -36,7 +36,7 @@
     var tier;
     if (!g) tier = 'low'; // no hardware WebGL at all
     else if (/swiftshader|llvmpipe|softpipe|software|basic render|microsoft basic/.test(g)) tier = 'low';
-    else if (/nvidia|geforce|rtx|gtx|quadro|radeon rx|radeon pro|amd radeon(?! graphics)|apple m\d/.test(g)) tier = 'high';
+    else if (/nvidia|geforce|rtx|gtx|quadro|radeon rx|radeon pro|amd radeon(?!.*graphics)|apple m\d/.test(g)) tier = 'high';
     else tier = 'balanced';
     // Phones and tablets: Auto never goes above Balanced (battery, heat).
     if (mobile && PRESETS.indexOf(tier) > PRESETS.indexOf('balanced')) tier = 'balanced';
