@@ -88,7 +88,7 @@ function startAmbience() {
   if (!buf) return; // failed to load: no bed, no error
   var g = ctx.createGain();
   g.gain.value = AMBIENCE.gain;
-  var src = ctx.createBufferSource();
+  var src = (globalThis.GameOptions ? globalThis.GameOptions.trackSource(ctx.createBufferSource(), null) : ctx.createBufferSource());
   src.buffer = buf;
   src.loop = true;
   src.connect(g).connect(bus);
@@ -120,7 +120,7 @@ function loadSample(name) {
 
 // ---------- playback ----------
 function playBuffer(buf) {
-  var src = ctx.createBufferSource();
+  var src = (globalThis.GameOptions ? globalThis.GameOptions.trackSource(ctx.createBufferSource(), null) : ctx.createBufferSource());
   src.buffer = buf;
   src.connect(bus);
   src.start();
@@ -162,7 +162,7 @@ window.HSSfx = api;
 // ---------- synthesized fallbacks ----------
 function tone(opts) {
   var t0 = ctx.currentTime + (opts.at || 0);
-  var osc = ctx.createOscillator();
+  var osc = (globalThis.GameOptions ? globalThis.GameOptions.trackSource(ctx.createOscillator(), null) : ctx.createOscillator());
   var g = ctx.createGain();
   osc.type = opts.type || 'sine';
   osc.frequency.setValueAtTime(opts.freq, t0);
@@ -181,7 +181,7 @@ function knock(at, gain, cutoff) {
   var buf = ctx.createBuffer(1, len, ctx.sampleRate);
   var d = buf.getChannelData(0);
   for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.12));
-  var src = ctx.createBufferSource();
+  var src = (globalThis.GameOptions ? globalThis.GameOptions.trackSource(ctx.createBufferSource(), null) : ctx.createBufferSource());
   src.buffer = buf;
   var f = ctx.createBiquadFilter();
   f.type = 'lowpass';
