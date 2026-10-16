@@ -2,8 +2,10 @@
  * A modal dialog outside #app (so board re-renders never touch it) with the
  * Graphics section: quality preset, render scale, one override per effect,
  * adaptive resolution and a frame-rate readout. Strings for the panel are
- * localized in the nine supported locales; the locale comes from ?lang= or
- * navigator.languages. */
+ * localized in the nine supported locales and follow the game language
+ * (window.HSI18N; the Language section itself comes from game-options.js).
+ * Only the Graphics box (#hs-gfx-box) redraws itself, so the shared Sound /
+ * frame-rate / Language / Report sections mounted beside it survive. */
 (function () {
 'use strict';
 
@@ -208,7 +210,8 @@ function pickLocale() {
   return 'en-US';
 }
 
-var LOCALE = pickLocale();
+function gameLocale() { return window.HSI18N && STRINGS[window.HSI18N.lang] ? window.HSI18N.lang : pickLocale(); }
+var LOCALE = gameLocale();
 var T = STRINGS[LOCALE];
 var Gfx = window.HSGfx;
 var Model = Gfx.model;
@@ -221,16 +224,20 @@ function esc(s) {
 }
 function fmt(s, tier) { return s.replace('{tier}', tier); }
 
+function shell() {
+  return '<div class="hs-settings" role="dialog" aria-modal="true" aria-labelledby="hs-settings-title">' +
+    '<div class="hs-settings-head"><h2 id="hs-settings-title">' + esc(T.settings) + '</h2>' +
+    '<button id="btn-settings-close" class="hs-btn secondary" type="button">' + esc(T.close) + '</button></div>' +
+    '<section class="hs-settings-section" aria-labelledby="hs-gfx-heading"><h3 id="hs-gfx-heading">' + esc(T.graphics) + '</h3>' +
+    '<div id="hs-gfx-box"></div></section></div>';
+}
+
 function build() {
   var info = Gfx.info();
   var s = Gfx.settings();
   var r = info.resolved;
   var presetSel = Model.PRESETS.indexOf(s.preset) >= 0 ? s.preset : 'auto';
-  var html = '<div class="hs-settings" role="dialog" aria-modal="true" aria-labelledby="hs-settings-title">' +
-    '<div class="hs-settings-head"><h2 id="hs-settings-title">' + esc(T.settings) + '</h2>' +
-    '<button id="btn-settings-close" class="hs-btn secondary" type="button">' + esc(T.close) + '</button></div>' +
-    '<section class="hs-settings-section" aria-labelledby="hs-gfx-heading"><h3 id="hs-gfx-heading">' + esc(T.graphics) + '</h3>' +
-    '<div class="hs-set-row"><label for="gfx-preset">' + esc(T.quality) + '</label>' +
+  var html = '<div class="hs-set-row"><label for="gfx-preset">' + esc(T.quality) + '</label>' +
     '<select id="gfx-preset" data-gfx="preset">' +
     '<option value="auto"' + (presetSel === 'auto' ? ' selected' : '') + '>' + esc(fmt(T.auto, T.presets[info.detected])) + '</option>' +
     Model.PRESETS.map(function (p) {
@@ -256,7 +263,7 @@ function build() {
     '<p id="gfx-summary" class="hs-gfx-summary" aria-live="polite">' + esc(summary(info)) + '</p>' +
     (info.failed ? '<p id="gfx-note" class="hs-gfx-note">' + esc(T.failed) + '</p>' : '') +
     (info.reduced && !info.failed ? '<p class="hs-gfx-note">' + esc(T.reduced) + '</p>' : '') +
-    '<p class="hs-gfx-hint">' + esc(T.saved) + '</p></section></div>';
+    '<p class="hs-gfx-hint">' + esc(T.saved) + '</p>';
   return html;
 }
 
@@ -266,14 +273,17 @@ function summary(info) {
 
 function render(focusId) {
   if (!root) return;
-  root.innerHTML = build();
+  if (!root.firstChild) {
+    root.innerHTML = shell();
+    document.getElementById('btn-settings-close').addEventListener('click', close);
+  }
+  document.getElementById('hs-gfx-box').innerHTML = build();
   wire();
   var el = focusId && document.getElementById(focusId);
   if (el) el.focus();
 }
 
 function wire() {
-  document.getElementById('btn-settings-close').addEventListener('click', close);
   var preset = document.getElementById('gfx-preset');
   preset.addEventListener('change', function () {
     Gfx.set(Model.choosePreset(Gfx.settings(), preset.value));
@@ -347,9 +357,22 @@ Gfx.onChange(function () {
   if (el) el.textContent = summary(Gfx.info());
 });
 
+// Language change: retitle the dialog and redraw only the Graphics box.
+document.addEventListener('hs-language', function () {
+  LOCALE = gameLocale();
+  T = STRINGS[LOCALE];
+  if (!root) return;
+  document.getElementById('hs-settings-title').textContent = T.settings;
+  document.getElementById('btn-settings-close').textContent = T.close;
+  document.getElementById('hs-gfx-heading').textContent = T.graphics;
+  var active = document.activeElement && root.contains(document.activeElement) ? document.activeElement.id : null;
+  render(active && document.getElementById('hs-gfx-box').contains(document.activeElement) ? active : null);
+});
+
 window.HSSettings = {
   open: open, close: close, isOpen: function () { return !!root; },
-  label: function () { return T.settings; }, locale: LOCALE,
+  label: function () { return T.settings; },
+  get locale() { return LOCALE; },
   t: function (key, vars) {
     var str = (SH_STRINGS[LOCALE] || SH_STRINGS['en-US'])[key] || key;
     Object.keys(vars || {}).forEach(function (k) { str = str.replace('{' + k + '}', vars[k]); });

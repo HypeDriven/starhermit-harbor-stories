@@ -204,6 +204,60 @@ async function platformFlow(page, tag) {
   });
 }
 
+// Language: Automatic follows the StarHermit preferred language (fr-CA); an
+// explicit choice in Settings mid-round re-renders the board, tasks and the
+// panel without resetting the round and is saved to ui.language; Report a
+// problem posts a bug report.
+async function languageFlow(page, tag) {
+  await step(`[${tag}] Language: Automatic follows the account; switching mid-round re-renders; ui.language; report`, async () => {
+    const calls = await stubStarHermit(page, { preferredLanguage: 'fr-CA' });
+    await page.goto('about:blank');
+    await page.goto('/index.html#game_token=' + launchToken(), { waitUntil: 'load' });
+    await page.waitForFunction(() => document.documentElement.lang === 'fr-CA');
+    if ((await page.textContent('#btn-start')).trim() !== 'Jouer') throw new Error('title not in French');
+    await page.click('#btn-start');
+    await page.waitForSelector('.hs-board');
+    let mirror = Rules.createGame(Content.JOURNEY[0]);
+    const h = Rules.hint(mirror);
+    await page.click(cellSel(h.from.r, h.from.c));
+    await page.click(cellSel(h.to.r, h.to.c));
+    mirror = Rules.applyCommand(mirror, { type: h.type, from: h.from, to: h.to }).state;
+    await page.waitForFunction((n) => Number(document.querySelector('.hs-score b').textContent) === n, mirror.moves);
+    await page.click('#btn-settings');
+    const choice = page.locator('[data-game-language="choice"]');
+    await choice.scrollIntoViewIfNeeded();
+    const auto = await choice.locator('option').first().textContent();
+    if (!/^Automatique — Français \(Canada\)$/.test(auto)) throw new Error('Automatic label not resolved: ' + auto);
+    await choice.selectOption('it-IT');
+    await page.waitForFunction(() => document.documentElement.lang === 'it-IT');
+    await page.waitForFunction(() => /Salvato/.test(document.querySelector('[data-game-language="status"]').textContent));
+    if (calls.settings['ui.language']?.choice !== 'it-IT') throw new Error('ui.language not saved: ' + JSON.stringify(calls.settings));
+    if ((await page.textContent('#hs-settings-title')) !== 'Impostazioni') throw new Error('settings title not re-rendered');
+    if (!/Qualità/.test(await page.textContent('label[for="gfx-preset"]'))) throw new Error('graphics box not re-rendered');
+    if (!/Consegna selezione/.test(await page.textContent('#btn-deliver'))) throw new Error('board UI not re-rendered');
+    if (Number(await page.locator('.hs-score b').first().textContent()) !== mirror.moves) throw new Error('round reset by the language change');
+    await page.locator('[data-game-report="title"]').scrollIntoViewIfNeeded();
+    await page.fill('[data-game-report="title"]', 'Test report');
+    await page.click('[data-game-report="send"]');
+    await page.waitForFunction(() => /Grazie/.test(document.querySelector('[data-game-report="status"]').textContent));
+    if (!calls.reports?.[0] || calls.reports[0].kind !== 'bug') throw new Error('report not posted');
+    await page.screenshot({ path: `/tmp/harbor-stories-e2e-language-${tag}.png` });
+    if (tag === 'mobile') {
+      await choice.selectOption('de-DE');
+      await page.waitForFunction(() => document.documentElement.lang === 'de-DE');
+      await page.click('#btn-settings-close');
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      if (overflow > 0) throw new Error('German board overflows by ' + overflow + 'px');
+      await page.screenshot({ path: `/tmp/harbor-stories-e2e-language-de-${tag}.png` });
+      await page.click('#btn-settings');
+    }
+    await choice.selectOption('auto');
+    await page.waitForFunction(() => document.documentElement.lang === 'fr-CA');
+    await page.click('#btn-settings-close');
+    await page.unroute(/\/api\/v1\//);
+  });
+}
+
 async function graphicsFlow(page, tag) {
   const shot = (n) => `/tmp/harbor-stories-e2e-${n}-${tag}.png`;
   const body = (attr) => page.getAttribute('body', attr);
@@ -319,6 +373,7 @@ try {
       await playthrough(page, pass.tag);
       await graphicsFlow(page, pass.tag);
       await platformFlow(page, pass.tag);
+      await languageFlow(page, pass.tag);
     } catch (err) {
       if (errors.length) console.error(`page errors during ${pass.tag} pass:\n` + errors.join('\n'));
       throw err;

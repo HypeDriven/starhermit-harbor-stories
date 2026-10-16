@@ -13,6 +13,7 @@ var displayName = null;    // account nickname, or "Player " + id prefix
 var avatar = null;         // object URL of the account avatar, or null
 var syncStatus = 'offline';// offline | loading | saving | synced | error
 var listeners = [];
+var conflictHandlers = [];
 var leaderboardCache = null;
 
 function online() { return !!(SH && SH.signedIn); }
@@ -57,7 +58,7 @@ function loadLeaderboard() {
     if (!entries.length) return null;
     return Promise.all(entries.map(function (e) {
       return SH.profile(e.userId).then(function (p) {
-        return { name: p ? p.displayName : (e.username || 'Player'), score: Number(e.score) || 0, mine: String(e.userId) === String(SH.userId) };
+        return { name: p ? p.displayName : (e.username || (window.HSI18N ? window.HSI18N.T('Player') : 'Player')), score: Number(e.score) || 0, mine: String(e.userId) === String(SH.userId) };
       });
     })).then(function (list) { leaderboardCache = list; notify(); return list; });
   }).catch(function () { return null; });
@@ -95,6 +96,13 @@ function copyInvite() {
 if (SH) {
   SH.init();
   SH.on('saved', function (ok) { setSync(ok ? 'synced' : 'error'); });
+  // A conditional write lost to a save from another device: reload the cloud
+  // copy and let the game merge it (main.js) and save again.
+  SH.on('saveconflict', function () {
+    SH.loadJSON().then(function (doc) {
+      conflictHandlers.forEach(function (cb) { try { cb(doc); } catch (e) { /* ignore */ } });
+    });
+  });
   SH.on('auth', function (a) {
     if (!a.signedIn) { displayName = null; avatar = null; leaderboardCache = null; syncStatus = 'offline'; notify(); }
   });
@@ -109,10 +117,15 @@ window.HSPlatform = {
   isOnline: online,
   canSignIn: function () { return !!(SH && SH.canSignIn()); },
   signIn: function () { return SH && SH.signIn(); },
-  displayName: function () { return displayName || (online() ? 'Player ' + String(SH.userId).slice(0, 6) : null); },
+  displayName: function () {
+    if (displayName || !online()) return displayName || null;
+    var id = String(SH.userId).slice(0, 6);
+    return window.HSI18N ? window.HSI18N.T('Player {id}', { id: id }) : 'Player ' + id;
+  },
   avatarUrl: function () { return avatar; },
   syncStatus: function () { return syncStatus; },
   onUpdate: function (cb) { listeners.push(cb); },
+  onConflict: function (cb) { conflictHandlers.push(cb); },
   loadCloudSave: loadCloudSave,
   pushSave: pushSave,
   flushSave: flushSave,

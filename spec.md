@@ -25,9 +25,10 @@ restoration jobs that bring a fog-bound harbor town back to life.
 
 | Path | Responsibility |
 |---|---|
-| `index.html` | Shell: `<div id="app">`, ten deferred script tags, `<noscript>` notice. |
+| `index.html` | Shell: `<div id="app">`, thirteen deferred script tags (SDK, `sh-language.js`, `js/strings.js`, `js/i18n.js`, then the game), `<noscript>` notice. |
 | `css/style.css` | Every style: title screen, HUD, task rail, board grid, cells, results card, mobile rules. |
-| `starhermit-sdk.js` | Shared StarHermit client (`window.StarHermit`), copied unchanged from `tools/`. |
+| `starhermit-sdk.js`, `sh-language.js` | Shared StarHermit client (`window.StarHermit`) and language preference (`window.StarHermitLanguage`), copied unchanged from `tools/`. |
+| `js/strings.js`, `js/i18n.js` | Translation tables (English source strings as keys) and `window.HSI18N` (`T`, `TH`, the Language setting, `hs-language` event) (§10). |
 | `js/platform.js` | `window.HSPlatform`: StarHermit adapter over the SDK (§12). |
 | `js/rng.js` | UMD `HSRNG`. mulberry32 PRNG, FNV-1a `hashString`, three derived streams (rules/decor/av). |
 | `js/content.js` | UMD `HSContent`. 6 tool chains, 5 themes, 40 journey stages, 40 story scenes, 6 challenges, 3 practice presets, endless ruleset, daily generator, 5 tutorial lessons, 10 achievements. |
@@ -35,13 +36,14 @@ restoration jobs that bring a fog-bound harbor town back to life.
 | `js/sfx.js` | `window.HSSfx`. Event→sample map, lazy fetch/decode/cache, ambience loop, per-event synth fallback, mute/volume persisted to `localStorage`. |
 | `js/gfx.js` | UMD `HSGfxModel`. Pure graphics quality model: presets, categories, `detectPreset`, `resolve`, `presetTier`, `choosePreset`, `setOverride`, `describe`. |
 | `js/graphics.js` | `window.HSGfx`. GPU detection, backdrop canvas `#hs-gfx-bg`, particle canvas `#hs-gfx-fx`, `body[data-gfx-*]` attributes, frame loop, adaptive resolution, FPS readout, `localStorage['hs-gfx']`. |
-| `js/settings.js` | `window.HSSettings`. The Settings dialog (Graphics section) and its strings in nine locales. |
+| `js/settings.js` | `window.HSSettings`. The Settings dialog (Graphics box; the shared `game-options.js` adds Sound, frame rate, Language and Report a problem beside it) and its strings in nine locales. |
 | `js/main.js` | The whole UI: title screen, game render, click/key handlers, status line, best-score store. |
 | `score-script.js` | StarHermit platform script (`server=`): range-checks a finished run's score and posts it to the `high-score` board (canonical copy in the games repo's `tools/score-script.js`). |
 | `server.js` | Local dev server: 72-line static file server (`PORT`, default 8080), traversal guard, MIME table incl. `.webp`/`.opus`. |
 | `tests/rules.test.mjs` | `npm test` — 12 `node --test` cases over the rules contract. |
 | `tests/gfx.test.mjs` | `npm test` — 6 `node --test` cases over the graphics quality model. |
-| `tests/platform.test.mjs` | `npm test` — 3 cases: launch token, profile, cloud save `game:<slug>`, settings KV, bindings, invite link; standalone makes no fetch. |
+| `tests/platform.test.mjs` | `npm test` — 4 cases: launch token, profile, cloud save `game:<slug>`, settings KV, bindings, invite link; standalone makes no fetch; a refused (412) save reloads the cloud doc for the merge. |
+| `tests/i18n.test.mjs` | `npm test` — every used string key translated in the nine locales; language follows `sh-language.js` and switches live. |
 | `tests/e2e.mjs` | `npm run test:e2e` — playwright-core playthrough of the real UI, desktop + mobile. |
 | `sfx/` | 15 Opus clips, `manifest.txt` (canonical), `manifest.json` (generator input), `manifest.md`. |
 | `assets/` | `key-art.webp`, `harbor-restored.webp`, `harbor-jammed.webp`, `dock-planks.webp`. |
@@ -331,15 +333,28 @@ breaks a cue. Repeat suppression: the same event cannot re-trigger within 50 ms.
 
 ## 10. Localization
 
-Every user-visible string is a hard-coded English literal in `js/main.js` (UI chrome, status lines, the
-`INVALID_TEXT` table) and `js/content.js` (chain and tier names, stage names, task labels, intros, scenes,
-achievements). `index.html` declares `lang="en"`. **The nine required locales (en-US, en-GB, es-419, es-ES,
-de-DE, fr-FR, fr-CA, pt-BR, it-IT) do not ship** — this is the largest open gap against the product spec, and
-is listed in §16 and §17 rather than described as working.
+Nine locales ship: **en-US, en-GB, es-419, es-ES, de-DE, fr-FR, fr-CA, pt-BR, it-IT**. Every string the player
+can see — title, player chip, leaderboard, header, task rail, buttons, status line (events, hints, rejected
+moves, achievements), board cell labels and aria-labels, end card — is an English key in `js/strings.js` with
+es-419, de-DE, fr-FR, pt-BR and it-IT translations; en-GB ("Harbour restored!"), es-ES and fr-CA ("Pointage")
+carry only their differences. Content shown in play is translated by key too: all 24 tool names, stage 1's
+name, intro and task labels, and the ten achievement names; content with no UI entry point (stages 2–40, story
+scenes, challenges) stays English until it is reachable (§16). The Settings dialog and the account strings
+(sign-in, invite, toasts, leaderboard line) have their own nine-locale tables in `js/settings.js`. "Harbor
+Stories", "StarHermit" and "Brinemist Quay" are names and are not translated.
 
-The one exception is the Settings dialog (`js/settings.js`): its labels, options, summary and notes ship in all
-nine locales, chosen from `?lang=` or `navigator.languages` (e.g. `es-MX` → es-419, `fr-CA` → fr-CA, `en-AU` →
-en-GB, anything unmatched → en-US).
+- **Language setting:** Settings → **Language → Game language** (rendered by the shared `game-options.js`
+  below the Graphics box; Settings opens from the title and from the game header) offers **Automatic —
+  <resolved language>** plus the nine locales by native name, with a sync status line.
+- **Resolution** (`sh-language.js`): explicit game choice → for Automatic, the StarHermit account's
+  `preferredLanguage` (`GET /api/v1/me/language`, signed in only) → `navigator.languages` → en-US, mapped to
+  the nearest shipped locale (`es-MX → es-419`, `en-AU → en-GB`). The choice (`auto` or a locale) is stored per
+  player in `localStorage['harbor-stories.language.<user|guest>']` and, signed in, in the per-player settings
+  key `ui.language` as `{ choice }`; the game never writes the platform preference. `?lang=` forces a locale
+  for the page load (QA links) and hides the selector.
+- **Live switching:** a change sets `<html lang>` and fires `hs-language`; the title or game screen
+  re-renders with the round, selection and moves intact (the status line is rebuilt from its source event),
+  and the open Settings dialog retitles itself and redraws only its Graphics box.
 
 The layout is expansion-ready: no fixed-width text containers, `clamp()` type, wrapping task lines and a
 status line reserved at `min-height: 1.5em`, so a 30 % longer German string reflows instead of clipping.
@@ -377,10 +392,18 @@ leaderboard script; `server.js` stays the local static host), `version`, `conten
 
 - renews the token through the SDK; if renewal is refused the chip disappears, a toast says the player is
   signed out, and play continues locally;
-- shows a player chip (avatar, nickname from `GET /api/v1/users/{sub}/profile` or `Player <id>`, sync state);
-- loads the cloud-save slot `game:<slug>` remote-first on start and merges it into `hs-save` (remote wins,
+- shows a player chip (avatar, nickname from `GET /api/v1/users/{sub}/profile` or a localized `Player <id>`, sync state);
+- loads the cloud-save slot `game:<slug>` remote-first on start and merges it into `hs-save` (best score and
   counters by max, achievements union), then mirrors every save-doc change with a 2 s debounce and a
   keepalive flush on `pagehide`/hidden; localStorage stays the offline cache;
+- writes are conditional on the version last read: when another device saved first (`saveconflict`), the
+  game reloads the cloud doc, merges it the same way (higher best, larger counters, union of achievements;
+  the current round is untouched) and saves the merged doc;
+- Settings → **Report a problem** (signed in, from `game-options.js`) files a bug report through
+  `StarHermit.reportBug` with a small non-personal `context.json`; uncaught errors are filed as crash
+  reports through `StarHermit.captureCrashes` (capped by the SDK);
+- reads the per-player `ui.language` setting and the account's preferred language for the Language
+  setting (§10);
 - mirrors preferences to the per-game settings KV: `sfx` (`{volume, muted}`) on Sound toggle and `gfx`
   (the `hs-gfx` override object) on any Settings change; on start the platform values are applied over the
   local ones;
@@ -492,7 +515,8 @@ Kimodo would produce assets with nowhere to live.
 
 1. Only journey stage 1 is reachable; the other 39 stages, all challenges, practice, daily, endless and the
    tutorial exist as tested data with no UI entry point.
-2. No localization beyond the Settings dialog — game strings are English literals, against a nine-locale requirement.
+2. Content without a UI entry point (stages 2–40, story scenes, challenges, chapter names, achievement
+   descriptions) has no translations yet; everything reachable in play is localized (§10).
 3. StarHermit usage stops at the launch token, profile nickname, cloud save mirror, local achievements and
    the high-score leaderboard (§12); `score-script.js` only range-checks the submitted score (no replay
    validation), and `GET /api/v1/time` is unused.
@@ -515,8 +539,7 @@ Kimodo would produce assets with nowhere to live.
 - **Mode select.** A title-screen route into Journey (chapter/stage map with stars), Daily, Practice,
   Challenge, Score Chase and Learn, driving the `content.js` configs that already exist and are unit-tested.
 - **Story scenes.** Show `SCENES[stage]` on stage completion with its two choices, flavour-only by design.
-- **Localization** of all `main.js` and `content.js` strings into the nine required locales, chosen from the
-  host locale with an in-game override.
+- **Localization** of the unreachable content (stages 2–40, scenes, challenges) once it gets a UI entry point.
 - **StarHermit wiring:** done — launch-token scope (fragment read, 45-min refresh), cloud-saved progression,
   idempotent local achievement unlocks for the ten declared keys (carried in the save doc). Still future:
   `GET /api/v1/time` for the daily UTC boundary and a daily leaderboard validated server-side by replaying
