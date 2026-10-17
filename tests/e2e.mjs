@@ -292,6 +292,7 @@ async function graphicsFlow(page, tag) {
     await expectAttr('data-gfx-shadows', 'off');
     const summary = await page.textContent('#gfx-summary');
     if (/shadows/.test(summary) || !/animated harbor/.test(summary)) throw new Error('summary not updated: ' + summary);
+    if (!/ · Level 0 · /.test(summary)) throw new Error('summary lacks the hardware level: ' + summary);
     // Game shortcuts are inert while the panel is open.
     const before = await page.textContent('#hs-status');
     await page.focus('#btn-settings-close'); // (a focused <select> would treat H as type-ahead)

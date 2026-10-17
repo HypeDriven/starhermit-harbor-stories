@@ -24,6 +24,7 @@ var STRINGS = {
       particles: { low: 'few particles', high: 'particles' }
     },
     unknownGpu: 'No hardware GPU detected',
+    level: 'Level {n}',
     failed: 'Scene effects are unavailable on this device, so the game is drawn without them.',
     reduced: 'Reduced motion is on: the backdrop stays still and particles are off.',
     saved: 'Changes apply immediately and are saved on this device.'
@@ -42,6 +43,7 @@ var STRINGS = {
       particles: { low: 'few particles', high: 'particles' }
     },
     unknownGpu: 'No hardware GPU detected',
+    level: 'Level {n}',
     failed: 'Scene effects are unavailable on this device, so the game is drawn without them.',
     reduced: 'Reduced motion is on: the backdrop stays still and particles are off.',
     saved: 'Changes apply immediately and are saved on this device.'
@@ -60,6 +62,7 @@ var STRINGS = {
       particles: { low: 'pocas partículas', high: 'partículas' }
     },
     unknownGpu: 'No se detectó una GPU de hardware',
+    level: 'Nivel {n}',
     failed: 'Los efectos de escena no están disponibles en este dispositivo; el juego se dibuja sin ellos.',
     reduced: 'Movimiento reducido activado: el fondo queda fijo y no hay partículas.',
     saved: 'Los cambios se aplican al instante y se guardan en este dispositivo.'
@@ -78,6 +81,7 @@ var STRINGS = {
       particles: { low: 'pocas partículas', high: 'partículas' }
     },
     unknownGpu: 'No se ha detectado una GPU de hardware',
+    level: 'Nivel {n}',
     failed: 'Los efectos de escena no están disponibles en este dispositivo; el juego se dibuja sin ellos.',
     reduced: 'Movimiento reducido activado: el fondo queda fijo y no hay partículas.',
     saved: 'Los cambios se aplican al momento y se guardan en este dispositivo.'
@@ -96,6 +100,7 @@ var STRINGS = {
       particles: { low: 'wenige Partikel', high: 'Partikel' }
     },
     unknownGpu: 'Keine Hardware-GPU erkannt',
+    level: 'Stufe {n}',
     failed: 'Szeneneffekte sind auf diesem Gerät nicht verfügbar; das Spiel wird ohne sie dargestellt.',
     reduced: 'Reduzierte Bewegung ist aktiv: Die Kulisse bleibt still, Partikel sind aus.',
     saved: 'Änderungen gelten sofort und werden auf diesem Gerät gespeichert.'
@@ -114,6 +119,7 @@ var STRINGS = {
       particles: { low: 'peu de particules', high: 'particules' }
     },
     unknownGpu: 'Aucun GPU matériel détecté',
+    level: 'Niveau {n}',
     failed: 'Les effets de scène ne sont pas disponibles sur cet appareil ; le jeu s’affiche sans eux.',
     reduced: 'Mouvements réduits activés : le décor reste fixe et les particules sont coupées.',
     saved: 'Les changements s’appliquent aussitôt et sont enregistrés sur cet appareil.'
@@ -132,6 +138,7 @@ var STRINGS = {
       particles: { low: 'peu de particules', high: 'particules' }
     },
     unknownGpu: 'Aucun GPU matériel détecté',
+    level: 'Niveau {n}',
     failed: 'Les effets de scène ne sont pas offerts sur cet appareil; le jeu s’affiche sans eux.',
     reduced: 'Mouvements réduits activés : le décor reste fixe et les particules sont désactivées.',
     saved: 'Les changements s’appliquent tout de suite et sont enregistrés sur cet appareil.'
@@ -150,6 +157,7 @@ var STRINGS = {
       particles: { low: 'poucas partículas', high: 'partículas' }
     },
     unknownGpu: 'Nenhuma GPU de hardware detectada',
+    level: 'Nível {n}',
     failed: 'Os efeitos de cena não estão disponíveis neste dispositivo; o jogo é desenhado sem eles.',
     reduced: 'Movimento reduzido ativado: o cenário fica parado e as partículas ficam desligadas.',
     saved: 'As mudanças valem na hora e ficam salvas neste dispositivo.'
@@ -168,6 +176,7 @@ var STRINGS = {
       particles: { low: 'poche particelle', high: 'particelle' }
     },
     unknownGpu: 'Nessuna GPU hardware rilevata',
+    level: 'Livello {n}',
     failed: 'Gli effetti di scena non sono disponibili su questo dispositivo; il gioco viene disegnato senza.',
     reduced: 'Movimento ridotto attivo: lo sfondo resta fermo e le particelle sono disattivate.',
     saved: 'Le modifiche si applicano subito e vengono salvate su questo dispositivo.'
@@ -268,7 +277,8 @@ function build() {
 }
 
 function summary(info) {
-  return (info.gpu || T.unknownGpu) + ' · ' + Model.describe(info.resolved, info.pixels, T.sum);
+  return [info.gpu || T.unknownGpu, info.level != null ? T.level.replace('{n}', info.level) : null,
+    Model.describe(info.resolved, info.pixels, T.sum)].filter(Boolean).join(' · ');
 }
 
 function render(focusId) {

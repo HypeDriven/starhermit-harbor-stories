@@ -34,7 +34,8 @@ restoration jobs that bring a fog-bound harbor town back to life.
 | `js/content.js` | UMD `HSContent`. 6 tool chains, 5 themes, 40 journey stages, 40 story scenes, 6 challenges, 3 practice presets, endless ruleset, daily generator, 5 tutorial lessons, 10 achievements. |
 | `js/rules.js` | UMD `HSRules`. Pure engine: create, legality, resolution, scoring, spawn, terminal, hints, hashing, serialization, command-shape validation. No DOM, no `Date.now()`. |
 | `js/sfx.js` | `window.HSSfx`. Event→sample map, lazy fetch/decode/cache, ambience loop, per-event synth fallback, mute/volume persisted to `localStorage`. |
-| `js/gfx.js` | UMD `HSGfxModel`. Pure graphics quality model: presets, categories, `detectPreset`, `resolve`, `presetTier`, `choosePreset`, `setOverride`, `describe`. |
+| `js/gfx.js` | UMD `HSGfxModel`. Pure graphics quality model: presets, categories, hardware-level detection (`detectLevel`, `presetForLevel`, `detectPreset`), per-preset `BUDGETS`/`budgetFor`, `resolve`, `presetTier`, `choosePreset`, `setOverride`, `describe`. |
+| `js/gpu-level.js` | Shared StarHermit hardware-level module (`window.StarHermitGpu`, loaded before `js/gfx.js`), copied from the platform tools, never edited here. |
 | `js/graphics.js` | `window.HSGfx`. GPU detection, backdrop canvas `#hs-gfx-bg`, particle canvas `#hs-gfx-fx`, `body[data-gfx-*]` attributes, frame loop, adaptive resolution, FPS readout, `localStorage['hs-gfx']`. |
 | `js/settings.js` | `window.HSSettings`. The Settings dialog (Graphics box; the shared `game-options.js` adds Sound, frame rate, Language and Report a problem beside it) and its strings in nine locales. |
 | `js/main.js` | The whole UI: title screen, game render, click/key handlers, status line, best-score store. |
@@ -272,25 +273,56 @@ is drawn still, particles are skipped), with the identical layout.
 (`#hs-gfx-bg`, off/still/animated) paints a dusk sky with stars, a low sun on the horizon, a headland town with
 lit windows, a lighthouse whose beam sweeps and narrows as it turns, a sea with perspective wave lines and a
 shimmering sun-glitter path, two bobbing moored boats, drifting fog and (with particles) rising embers; the
-static parts are cached in an offscreen layer and the moving parts redraw at ~30 fps. **Tile detail**
+static parts are cached in an offscreen layer and the moving parts redraw at the preset's backdrop rate (below). **Tile detail**
 (flat/detailed) turns empty cells into dark water with a caustic highlight, occupied tiles into bevelled slate
 with a halo and rim in the chain's colour (gold rim on tier-4 masterworks), lights the plank deck from above,
-and gives panels a translucent glass finish over the backdrop. **Shadows** (off/low/high) add tile, panel and
+and gives panels a translucent glass finish over the backdrop (frosted with a backdrop blur only on High/Ultra). **Shadows** (off/low/high) add tile, panel and
 glyph drop shadows. **Glow (bloom)** (off/on) lights the selected tool, masterworks, lantern glyphs, the title,
 primary buttons, the lighthouse lamp and the sun. **Colour grade & vignette** (off/on) warms the backdrop and
 darkens its corners (behind the UI, never over text or pieces). **Particles** (off/low/high) add merge and
 delivery sparks (a ring and a larger burst when a task completes) on `#hs-gfx-fx`. The Settings dialog's
-**Graphics** section offers a quality preset (Auto, chosen from the WebGL unmasked renderer string where
-software renderers get Low, discrete GPUs and Apple M get High, others Balanced, and phones/tablets are capped at
-Balanced; Low; Balanced; High; Ultra), a render scale (50–200 % of the preset's, applied to the canvases on top
+**Graphics** section offers a quality preset (Auto, chosen from the StarHermit hardware level below; Low; Balanced; High; Ultra), a render scale (50–200 % of the preset's, applied to the canvases on top
 of the device pixel ratio capped at 1/1.5/2/2 per preset), one override per effect ("From preset (…)" by
 default; choosing a preset clears overrides), adaptive resolution (averages 90 frames; above 26 ms it steps the
 canvas scale down by 0.1 to 60 %, below 14 ms back up by 0.05) and a frame-rate readout (bottom-left, never
-over controls), plus a summary line "GPU · effects · W×H px". Low is the original flat look and runs no frame
+over controls), plus a summary line "GPU · Level N · effects · W×H px" ("Level" localized). Low is the original flat look and runs no frame
 loop at all; a loop runs only while the backdrop is animated, particles are live or the readout is shown.
 Changes apply immediately, are saved in `localStorage['hs-gfx']`, and are mirrored as `body[data-gfx-preset]`,
 `data-gfx-auto` and `data-gfx-<category>`. If a canvas cannot be created the game draws without the scene and
 the panel says so; nothing is logged to the console.
+
+**Hardware-level detection.** `js/gpu-level.js` (shared StarHermit copy, `window.StarHermitGpu`) rates the GPU on
+the StarHermit hardware level 0–20 (0 = Galaxy S20 / Intel UHD or weaker and every software renderer, 20 = RTX
+5090, each level ≈ 1.23×; laptop parts two levels below desktop; phones, tablets and ≤ 4 GB machines capped at 9).
+`graphics.js` probes the unmasked renderer with `failIfMajorPerformanceCaveat` (so no software context is ever
+created; none → level 0) and adds the device facts from `StarHermitGpu.detectSystem()`; `gfx.js` maps the level
+with `presetForLevel(level, { low: 0, balanced: 4, high: 10, ultra: 17 })`, so Auto picks Ultra on strong GPUs;
+adaptive resolution still steps down when slow. Headless Chrome is level 0 → Low. Phones and tablets pace Auto
+FPS at half the display refresh rate ("Auto (half refresh rate)") and start at 16 simultaneous sounds (shared
+`game-options.js`).
+
+**Per-preset budgets** (`BUDGETS` / `budgetFor` in `js/gfx.js`; each preset holds 60 FPS on the weakest GPU Auto
+gives it — Low at level 0, Balanced 4, High 10, Ultra 17). Counts are tuned at the floor level and scale up within
+the preset on faster GPUs (`StarHermitGpu.scaleBudget`, ≤ 4×). The particle canvas is cleared only after a frame
+that drew sparks. Low's own tiers turn the backdrop and particles off; its budget applies when they are
+overridden on.
+
+| Budget | Low | Balanced | High | Ultra |
+|---|---|---|---|---|
+| Frosted (backdrop-filter) panels over the backdrop | no | no | yes | yes |
+| Animated-backdrop redraw rate | 20 Hz | 24 Hz | 30 Hz | 60 Hz |
+| Wave-line rows / sun-glitter flecks | 12 / 20 | 18 / 30 | 26 / 44 | 34 / 60 |
+| Embers at the floor level (Particles low: half) | 8 | 16 | 36 | 60 |
+| Sparks per merge burst at the floor level (low: half; task bursts ×2) | 10 | 16 | 26 | 34 |
+| Live-spark cap at the floor level | 80 | 140 | 260 | 400 |
+| Soft glow disc behind each spark (with Glow on) | no | yes | yes | yes |
+
+**Benchmark** (`node tools/gfx-bench.mjs harbor-stories`; hook `tests/gfx-bench.mjs` picks the preset in Settings
+and plays Journey stage 1 through visible board clicks following the rules engine's hint, pressing Play again
+after each win). This is a 2D-canvas/DOM game, so the gate judges CPU time per frame. Measured 2026-10-17:
+
+- Desktop 1920×1080: PASS low (idle — no frame loop at Low); PASS balanced (CPU p90 0.80 ms); PASS high (CPU 1.70 ms); PASS ultra (CPU 2.10 ms). The page's own WebGL probe gives a GPU timer too: every preset is ≤ 0.34 ms typical / 0.11 ms slow above the draws-skipped floor, projected to its floor level.
+- Mobile 390×844 @3×: PASS low (idle); PASS balanced (CPU p90 0.80 ms; 0.00 / 0.00 ms GPU above the floor).
 
 **Visual assets the design calls for:** title key art (golden-hour harbor), a win illustration (lit pier), a
 lock-up illustration (fogged, crated dock), a dock-plank board texture, and store cover art derived from the
@@ -459,14 +491,16 @@ Moves counter to match the mirror. Any `pageerror` or console `error`/`warning` 
 
 ## 14. Testing and acceptance criteria
 
-`npm test` (`tests/rules.test.mjs`, 12 cases, plus `tests/gfx.test.mjs`, 6 cases) verifies: seeded creation is reproducible and seed-sensitive;
+`npm test` (`tests/rules.test.mjs`, 12 cases, plus `tests/gfx.test.mjs`, 7 cases) verifies: seeded creation is reproducible and seed-sensitive;
 all 40 journey stages, 6 challenges, 3 practice presets, the endless ruleset, a daily config and all 5 tutorial
 lessons create a board with at least one legal action; all ten documented rejection reasons, with proof the
 state hash is unchanged; the worked scoring example above; streak reset and 100 ms time quantization; the four
 losing terminal reasons; tide spawn cadence and empty-board restock; the endless task-wave roll; hint priority
 order and that following hints from stage 1 always terminates; serialize/deserialize round-trip and version
 rejection; command-shape validation; and that `dailyConfig` is a pure function of the date. The graphics tests
-cover `detectPreset` on sample GPU strings and the mobile cap, `resolve` with auto/explicit presets, overrides
+cover hardware level → preset (software/none, AMD Radeon Graphics and Intel UHD → Low, Iris Xe → Balanced, GTX 1070
+→ High, RTX 4080/5090 → Ultra; phones such as Adreno 740 capped at Balanced), the per-preset budget table (explicit,
+non-decreasing, floor-level tuned, scaling with the level, blur only on High/Ultra), `resolve` with auto/explicit presets, overrides
 and render-scale clamping, preset changes clearing overrides, and the cost summary.
 
 `npm run test:e2e` runs the playthrough twice — desktop 1280×800 and mobile 390×844 with touch — asserting the
@@ -474,7 +508,7 @@ title screen, 25 cells and 2 tasks at start, Moves 0, a hint that changes the st
 clicks, the "Harbor restored!" card with a score at least the mirror's, and a clean fresh board after Play
 again. Each pass then opens Settings from the game header (Auto reads "detected: Low" under the software GPU,
 and the dialog fits the viewport), switches Low → High (checked via `body[data-gfx-preset]` and the backdrop
-canvas), overrides Shadows to Off (checked in the summary), confirms H is inert while the dialog is open and Esc
+canvas), overrides Shadows to Off (checked in the summary, which also shows "Level 0"), confirms H is inert while the dialog is open and Esc
 returns focus to Settings, reloads and checks the preset and override persisted, picks Ultra (override cleared),
 turns on the frame-rate readout and plays four moves at Ultra, then checks StarHermit: standalone makes no
 `/api/v1` request and shows no account buttons, and a `#game_token=` launch against a stubbed API shows the

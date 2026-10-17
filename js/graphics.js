@@ -18,8 +18,9 @@ var listeners = [];
 var saved = loadSaved();
 var gpu = detectGpu();
 var mobile = isMobile();
-var detected = Model.detectPreset(gpu, mobile);
-var q = Model.resolve(saved, detected);
+var level = Model.detectLevel(gpu, systemFacts());
+var detected = Model.presetForLevel(level);
+var q = Model.resolve(saved, detected, level);
 var reducedMq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
 var failed = false;
 var bg = null, bgCtx = null, fx = null, fxCtx = null, fpsEl = null;
@@ -43,10 +44,13 @@ function persist() {
 
 // Unmasked WebGL renderer string. failIfMajorPerformanceCaveat keeps software
 // fallbacks from being created at all (they resolve to Low without logging).
+var webgl2; // set by detectGpu() (called at the top, before this line runs)
 function detectGpu() {
   try {
     var c = document.createElement('canvas');
-    var gl = c.getContext('webgl', { failIfMajorPerformanceCaveat: true });
+    var gl = c.getContext('webgl2', { failIfMajorPerformanceCaveat: true });
+    webgl2 = !!gl;
+    gl = gl || c.getContext('webgl', { failIfMajorPerformanceCaveat: true });
     if (!gl) return '';
     var name = '';
     // Firefox already reports the unmasked name in RENDERER and warns about the extension.
@@ -59,6 +63,21 @@ function detectGpu() {
     if (lose) lose.loseContext();
     return String(name || '');
   } catch (e) { return ''; }
+}
+
+// Device facts for the StarHermit hardware level (js/gpu-level.js): phone/tablet, cores, memory, screen.
+// The renderer string comes from detectGpu() above, which never creates a software context.
+function systemFacts() {
+  var G = window.StarHermitGpu;
+  var facts = { mobile: isMobile(), webgl2: webgl2 };
+  try {
+    if (G) {
+      var sys = G.detectSystem({ navigator: navigator, screen: window.screen, matchMedia: window.matchMedia.bind(window) });
+      facts.touch = sys.touch; facts.screen = sys.screen; facts.cores = sys.cores; facts.memoryGb = sys.memoryGb;
+      facts.mobile = facts.mobile || sys.mobile;
+    }
+  } catch (e) { /* defaults */ }
+  return facts;
 }
 
 function isMobile() {
@@ -271,8 +290,9 @@ function drawBackdrop() {
 
     // wave lines with perspective spacing; they drift slowly
     x.lineWidth = 1;
-    for (var row = 0; row < 26; row++) {
-      var f = row / 26;
+    var B = q.budget, rows = B.waves;
+    for (var row = 0; row < rows; row++) {
+      var f = row / rows;
       var y = g.hz + 3 + Math.pow(f, 1.8) * (H - g.hz);
       var len = 14 + f * 70, gap = 26 + f * 120;
       var off = ((t * (6 + f * 14) + row * 37) % gap);
@@ -287,8 +307,8 @@ function drawBackdrop() {
     }
 
     // sun glitter path on the water
-    for (var k = 0; k < 44; k++) {
-      var fk = k / 44;
+    for (var k = 0, nk = B.glitter; k < nk; k++) {
+      var fk = k / nk;
       var gy = g.hz + 2 + Math.pow(fk, 1.6) * (H - g.hz) * 0.8;
       var spread = 8 + fk * W * 0.12;
       var gx = g.sunX + Math.sin(k * 12.9898 + t * 0.7) * spread;
@@ -377,7 +397,7 @@ function drawBoat(x, bx, by, s, t, phase) {
 }
 
 function drawEmbers(x, g, t) {
-  var want = q.particles === 'high' ? 36 : 16;
+  var want = q.particles === 'high' ? q.budget.embers : Math.ceil(q.budget.embers / 2);
   var rnd = Math.random;
   while (embers.length < want) {
     embers.push({ x: rnd() * g.W, y: g.hz + rnd() * (g.H - g.hz), v: 4 + rnd() * 8, p: rnd() * 6.28, r: 0.8 + rnd() * 1.4 });
@@ -437,7 +457,9 @@ function burst(kind, at, chain) {
   if (!el) return;
   var rect = el.getBoundingClientRect();
   var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
-  var n = (q.particles === 'high' ? 26 : 12) * (kind === 'task' ? 2 : 1);
+  var B = q.budget;
+  var n = (q.particles === 'high' ? B.sparks : Math.ceil(B.sparks / 2)) * (kind === 'task' ? 2 : 1);
+  n = Math.max(0, Math.min(n, B.sparkCap - particles.length));
   var k = (window.UIScale && window.UIScale.value) || 1; // sparks grow with the zoomed UI on large screens
   var col = kind === 'merge' ? [255, 200, 110] : hexRgb(chain);
   for (var i = 0; i < n; i++) {
@@ -462,16 +484,18 @@ function hexRgb(chain) {
   return CHAIN_HEX[chain];
 }
 
+var fxDirty = false;
 function drawParticles(dt) {
   if (!fxCtx) return;
   var x = fxCtx;
-  x.setTransform(1, 0, 0, 1, 0, 0);
-  x.clearRect(0, 0, fx.width, fx.height);
+  // Clear only when the last frame drew sparks (an idle full-screen clear still costs a composite).
+  if (fxDirty) { x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, fx.width, fx.height); fxDirty = false; }
   if (!particles.length) return;
+  fxDirty = true;
   x.setTransform(ratio, 0, 0, ratio, 0, 0);
   x.globalCompositeOperation = 'lighter';
   var s = dt / 1000;
-  var glow = q.bloom === 'on';
+  var glow = q.bloom === 'on' && q.budget.sparkGlow;
   particles = particles.filter(function (p) {
     p.life += s;
     if (p.life >= p.max) return false;
@@ -533,11 +557,11 @@ function frame(now) {
   time += dt / 1000;
   if (adapt(dt)) resize(true);
   else resize(false);
-  // The backdrop moves slowly: ~30 redraws a second is plenty and halves its cost.
-  if (animating() && now - lastDraw >= 30) { lastDraw = now; drawBackdrop(); }
+  // The backdrop moves slowly: the budget's redraw rate (20–60 Hz) keeps its cost bounded.
+  if (animating() && now - lastDraw >= 1000 / q.budget.bgHz - 4) { lastDraw = now; drawBackdrop(); }
   drawParticles(dt);
   if (needsLoop()) raf = window.requestAnimationFrame(frame);
-  else if (fxCtx) { fxCtx.setTransform(1, 0, 0, 1, 0, 0); fxCtx.clearRect(0, 0, fx.width, fx.height); }
+  else if (fxCtx && fxDirty) { fxCtx.setTransform(1, 0, 0, 1, 0, 0); fxCtx.clearRect(0, 0, fx.width, fx.height); fxDirty = false; }
 }
 
 // Adaptive resolution: average ~90 frames; slow → step down 0.1 (min 0.6), fast → up 0.05 (max 1).
@@ -576,9 +600,10 @@ function fpsVisible(on) {
 
 // ---------- apply ----------
 function apply() {
-  q = Model.resolve(saved, detected);
+  q = Model.resolve(saved, detected, level);
   var body = document.body;
   body.setAttribute('data-gfx-preset', q.preset);
+  body.setAttribute('data-gfx-blur', q.budget.panelBlur ? 'on' : 'off');
   body.setAttribute('data-gfx-auto', q.auto ? 'true' : 'false');
   Object.keys(Model.CATEGORIES).forEach(function (cat) { body.setAttribute('data-gfx-' + cat, q[cat]); });
   body.setAttribute('data-gfx-motion', reduced() ? 'reduced' : 'full');
@@ -599,7 +624,7 @@ function info() {
   var px = bg && q.background !== 'off' && !failed ? [bg.width, bg.height]
     : [Math.round(window.innerWidth * pixelRatio()), Math.round(window.innerHeight * pixelRatio())];
   return {
-    gpu: gpu, detected: detected, mobile: mobile, resolved: q, pixels: px,
+    gpu: gpu, level: level, detected: detected, mobile: mobile, resolved: q, pixels: px,
     fps: Math.round(fps), adaptiveScale: adaptiveScale, failed: failed, reduced: reduced()
   };
 }

@@ -174,8 +174,10 @@ body[data-gfx-detail="detailed"] .hs-layout > aside,
 body[data-gfx-detail="detailed"] .hs-board-wrap,
 body[data-gfx-detail="detailed"] .hs-score,
 body[data-gfx-detail="detailed"] .hs-player { background: linear-gradient(180deg, rgba(34,42,62,.93), rgba(22,28,43,.93)); border: 1px solid rgba(255,255,255,.06); }
-body[data-gfx-detail="detailed"]:not([data-gfx-background="off"]) .hs-layout > aside,
-body[data-gfx-detail="detailed"]:not([data-gfx-background="off"]) .hs-board-wrap { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+/* Frosted glass over the live backdrop only where the graphics budget allows it (High/Ultra,
+   data-gfx-blur): a backdrop blur is re-composited every time the animated harbor redraws. */
+body[data-gfx-blur="on"][data-gfx-detail="detailed"]:not([data-gfx-background="off"]) .hs-layout > aside,
+body[data-gfx-blur="on"][data-gfx-detail="detailed"]:not([data-gfx-background="off"]) .hs-board-wrap { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 body[data-gfx-detail="detailed"] .hs-tasks li { background: linear-gradient(180deg, #2a3348, #222a3c); box-shadow: inset 0 1px 0 rgba(255,255,255,.05); border-left: 3px solid rgba(255,184,77,.55); }
 body[data-gfx-detail="detailed"] .hs-tasks li.done { border-left-color: #6fcf7c; }
 body[data-gfx-detail="detailed"] .hs-board {

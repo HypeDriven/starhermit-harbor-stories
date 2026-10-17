@@ -1,5 +1,5 @@
 /* Harbor Stories — graphics quality model (pure: no DOM, no canvas).
- * Presets, per-category overrides, GPU detection and a cost summary, shared by
+ * Presets, per-category overrides, hardware-level detection, per-preset budgets and a cost summary, shared by
  * the renderer (js/graphics.js), the Settings panel (js/settings.js) and the
  * unit tests. Modelled on root-and-ruin's web/gfx.js. UMD: window.HSGfxModel. */
 (function (root, factory) {
@@ -30,17 +30,63 @@
     ultra:    { scale: 1.25, cap: 2,   background: 'animated', detail: 'detailed', shadows: 'high', bloom: 'on',  grade: 'on',  particles: 'high' }
   };
 
-  /** Best preset for this GPU, from the WebGL unmasked renderer string (null/'' = unknown). */
-  function detectPreset(gpu, mobile) {
-    var g = String(gpu || '').toLowerCase();
-    var tier;
-    if (!g) tier = 'low'; // no hardware WebGL at all
-    else if (/swiftshader|llvmpipe|softpipe|software|basic render|microsoft basic/.test(g)) tier = 'low';
-    else if (/nvidia|geforce|rtx|gtx|quadro|radeon rx|radeon pro|amd radeon(?!.*graphics)|apple m\d/.test(g)) tier = 'high';
-    else tier = 'balanced';
-    // Phones and tablets: Auto never goes above Balanced (battery, heat).
-    if (mobile && PRESETS.indexOf(tier) > PRESETS.indexOf('balanced')) tier = 'balanced';
-    return tier;
+  // Auto picks the preset from the StarHermit hardware level (0 = Galaxy S20 / Intel UHD or weaker, 20 =
+  // RTX 5090; js/gpu-level.js → window.StarHermitGpu): Low from 0, Balanced from 4, High from 10, Ultra
+  // from 17. Phones, tablets and ≤ 4 GB machines are capped at level 9 (Balanced); no hardware WebGL or a
+  // software renderer is level 0.
+  var LEVELS = { low: 0, balanced: 4, high: 10, ultra: 17 };
+  function gpuApi() { return (typeof self !== 'undefined' ? self : globalThis).StarHermitGpu; }
+
+  /** Hardware level (0–20) for an unmasked renderer string plus StarHermitGpu.detectSystem() facts. */
+  function detectLevel(gpu, system) {
+    var G = gpuApi();
+    var sys = Object.assign({ webgl: !!gpu, webgl2: true }, system || {}, { gpu: String(gpu || '') });
+    if (!gpu) sys.webgl = false; // no hardware WebGL at all
+    return G ? G.detectLevel(sys) : (gpu ? LEVELS.balanced : 0);
+  }
+
+  /** The preset Auto starts from for a hardware level. */
+  function presetForLevel(level) {
+    var G = gpuApi();
+    if (G) return G.presetForLevel(level, LEVELS);
+    return level >= 17 ? 'ultra' : level >= 10 ? 'high' : level >= 4 ? 'balanced' : 'low';
+  }
+
+  /** Best preset for this GPU (the hardware level already caps phones/tablets at Balanced). */
+  function detectPreset(gpu, system) {
+    return presetForLevel(detectLevel(gpu, system));
+  }
+
+  /*
+   * Per-preset budget for the painted backdrop and the particle canvas. Each preset holds 60 FPS on the
+   * weakest GPU Auto gives it (Low → level 0, Balanced → 4, High → 10, Ultra → 17; tests/gfx-bench.mjs).
+   * Gameplay is identical on every preset — only visuals change.
+   *   panelBlur  frosted (backdrop-filter) side panel and board frame over the backdrop — re-composited
+   *              every time the animated backdrop redraws, so only High/Ultra get it
+   *   bgHz       animated-backdrop redraw rate (the rest of the frames reuse the last paint)
+   *   waves      wave-line rows on the sea; glitter = sun-glitter flecks
+   *   embers     drifting embers over the water at the floor level (Particles low: half)
+   *   sparks     sparks per merge burst at the floor level (Particles low: half; deliveries ×2)
+   *   sparkCap   live-spark cap; sparkGlow = soft glow disc behind each spark (with Glow on)
+   */
+  var BUDGETS = {
+    low:      { panelBlur: false, bgHz: 20, waves: 12, glitter: 20, embers: 8,  sparks: 10, sparkCap: 80,  sparkGlow: false },
+    balanced: { panelBlur: false, bgHz: 24, waves: 18, glitter: 30, embers: 16, sparks: 16, sparkCap: 140, sparkGlow: true },
+    high:     { panelBlur: true,  bgHz: 30, waves: 26, glitter: 44, embers: 36, sparks: 26, sparkCap: 260, sparkGlow: true },
+    ultra:    { panelBlur: true,  bgHz: 60, waves: 34, glitter: 60, embers: 60, sparks: 34, sparkCap: 400, sparkGlow: true }
+  };
+  var EMBER_MAX = 160, SPARK_MAX = 60;
+
+  /** A preset's concrete budget for a hardware level (counts scale ≤ 4× within the preset). */
+  function budgetFor(preset, level) {
+    var b = Object.assign({}, BUDGETS[preset] || BUDGETS.balanced);
+    var G = gpuApi(), floor = LEVELS[preset] || 0;
+    var lv = Math.max(isFinite(level) ? Number(level) : floor, floor);
+    var k = G ? G.scaleBudget(1, lv, floor) : 1;
+    b.embers = Math.min(EMBER_MAX, Math.round(b.embers * k));
+    b.sparks = Math.min(SPARK_MAX, Math.round(b.sparks * k));
+    b.sparkCap = Math.round(b.sparkCap * k);
+    return b;
   }
 
   function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
@@ -55,7 +101,7 @@
    * Resolve saved settings into concrete tiers.
    * saved: { preset: 'auto'|preset, render_scale (%), adaptive, show_fps, <category>: 'preset'|tier }
    */
-  function resolve(saved, detected) {
+  function resolve(saved, detected, level) {
     var s = saved || {};
     var auto = PRESETS.indexOf(s.preset) < 0;
     var preset = auto ? (PRESETS.indexOf(detected) >= 0 ? detected : 'balanced') : s.preset;
@@ -65,6 +111,8 @@
     Object.keys(CATEGORIES).forEach(function (cat) {
       out[cat] = CATEGORIES[cat].indexOf(s[cat]) >= 0 ? s[cat] : row[cat];
     });
+    out.level = isFinite(level) && level !== null ? Number(level) : LEVELS[preset];
+    out.budget = budgetFor(preset, out.level);
     out.adaptive = s.adaptive !== false;
     out.showFps = !!s.show_fps;
     return out;
@@ -113,7 +161,8 @@
   }
 
   return {
-    PRESETS: PRESETS, CATEGORIES: CATEGORIES, TABLE: TABLE,
+    PRESETS: PRESETS, CATEGORIES: CATEGORIES, TABLE: TABLE, LEVELS: LEVELS, BUDGETS: BUDGETS,
+    detectLevel: detectLevel, presetForLevel: presetForLevel, budgetFor: budgetFor,
     detectPreset: detectPreset, resolve: resolve, presetTier: presetTier,
     choosePreset: choosePreset, setOverride: setOverride, clampScale: clampScale, describe: describe
   };
