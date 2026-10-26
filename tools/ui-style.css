@@ -1,0 +1,88 @@
+/* Harbor Stories — the UI's base look (the Low graphics tier: the browser
+ * build's flat style.css), for starhermit:ui. Converted once with
+ *   npm run css   (starhermit css tools/ui-style.css --out assets/ui-style.json)
+ * and registered at start (src/style.ts), which adds the detailed / shadow /
+ * glow looks of the higher tiers and the per-chain tile tints on top.
+ * The browser build's element selectors (li, header, aside, kbd) are classes
+ * here; its media queries are src/screens.ts's layout by window size; the
+ * Settings panel, frame-rate badge and canvases are gone (the runtime's
+ * Options menu, src/backdrop.ts). */
+:root {
+  --hs-bg: #10141c;
+  --hs-panel: #1a2130;
+  --hs-panel-soft: #232b3d;
+  --hs-text: #f5efe6;
+  --hs-muted: #9aa7bd;
+  --hs-accent: #ffb84d;
+  --hs-danger: #e05a4e;
+}
+
+/* ---- title screen */
+.hs-title-screen { padding: 48px 24px; text-align: center; }
+.hs-key-art { border-radius: 18px; box-shadow: 0 18px 48px rgba(0,0,0,.5), 0 0 0 1px rgba(255,184,77,.18); background: #1a2130 url("../assets/key-art.webp") center / cover no-repeat; }
+.hs-title-name { font-size: 56px; font-weight: 700; letter-spacing: 1px; color: var(--hs-accent); }
+.hs-tagline { font-size: 18px; color: var(--hs-muted); text-align: center; }
+.hs-best { color: var(--hs-muted); font-size: 15px; }
+.hs-lb-line { color: var(--hs-muted); font-size: 15px; text-align: center; }
+
+/* ---- buttons */
+.hs-btn {
+  padding: 10px 26px; border-radius: 999px; border: none;
+  background: var(--hs-accent); color: #241a08; font-size: 17px; font-weight: 600;
+}
+.hs-btn:hover { background: #ffc46b; }
+.hs-btn:focus-visible { outline: 3px solid white; outline-offset: 2px; }
+.hs-btn:disabled { opacity: .5; }
+.hs-btn.secondary { background: #dae5f8; }
+.hs-btn.secondary:hover { background: #ebf1fc; }
+.hs-btn-small { padding: 9px 14px; font-size: 15px; }
+.hs-kbd { font-size: 14px; color: #241a08; opacity: .7; border: 1px solid #241a08; border-radius: 4px; padding: 0 4px; }
+
+/* ---- the game's header */
+.hs-header-title { color: var(--hs-accent); font-size: 26px; font-weight: 700; }
+.hs-header-sub { color: var(--hs-muted); font-size: 16px; }
+.hs-score { padding: 9px 14px; border-radius: 12px; background: var(--hs-panel); font-size: 16px; color: var(--hs-text); }
+.hs-player { padding: 9px 14px; border-radius: 12px; background: var(--hs-panel); color: var(--hs-muted); font-size: 14px; }
+.hs-sync-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--hs-muted); }
+.hs-sync-synced { background: #6fcf7c; }
+.hs-sync-saving, .hs-sync-loading { background: var(--hs-accent); }
+.hs-sync-error { background: var(--hs-danger); }
+
+/* ---- the title's leaderboard */
+.hs-lb-title { font-size: 16px; font-weight: 700; color: var(--hs-accent); text-align: center; }
+.hs-lb-row { padding: 8px 12px; border-radius: 10px; background: var(--hs-panel); font-size: 14px; color: var(--hs-text); border: 1px solid transparent; }
+.hs-lb-row.mine { border: 1px solid var(--hs-accent); }
+.hs-lb-score { color: var(--hs-muted); font-size: 14px; }
+
+/* ---- the task rail and the board panel */
+.hs-panel { border-radius: 16px; background: var(--hs-panel); padding: 16px; }
+.hs-panel-title { font-size: 20px; font-weight: 700; color: var(--hs-text); }
+.hs-task { padding: 10px; border-radius: 10px; background: var(--hs-panel-soft); }
+.hs-task.done { opacity: .65; }
+.hs-task-name { font-size: 16px; font-weight: 700; color: var(--hs-text); }
+.hs-task-reqs { color: var(--hs-muted); font-size: 14px; }
+.hs-status { min-height: 24px; color: var(--hs-muted); font-size: 16px; }
+
+/* ---- the board */
+.hs-board { border-radius: 14px; background: #2b2018 url("../assets/dock-planks.webp") center / 256px 256px repeat; box-shadow: inset 0 0 0 1px rgba(0,0,0,.35), inset 0 0 40px rgba(0,0,0,.45); }
+.hs-cell { border: 2px solid #39465f; border-radius: 12px; background: rgba(17,26,41,.92); color: var(--hs-muted); }
+.hs-cell:focus-visible { outline: 3px solid white; outline-offset: 2px; }
+.hs-cell.occupied { color: var(--hs-text); background: #253248; }
+.hs-cell.selected { border-color: var(--hs-accent); box-shadow: 0 0 0 2px rgba(255,184,77,.25); }
+.hs-tier { font-size: 11px; font-weight: 700; color: #111a29; background: var(--hs-accent); border-radius: 999px; }
+
+/* ---- the results card */
+.hs-terminal { background: rgba(8,12,20,.9); }
+.hs-terminal-card { padding: 16px 20px 20px; border-radius: 18px; background: var(--hs-panel); box-shadow: 0 24px 64px rgba(0,0,0,.6), 0 0 0 1px rgba(255,184,77,.2); text-align: center; }
+.hs-terminal-title { font-size: 26px; font-weight: 700; color: var(--hs-accent); text-align: center; }
+.hs-terminal-score { font-size: 17px; color: var(--hs-text); text-align: center; }
+.hs-result-art { border-radius: 14px; box-shadow: 0 14px 40px rgba(0,0,0,.55); background: #1a2130; }
+.hs-result-won { background: #1a2130 url("../assets/harbor-restored.webp") center / cover no-repeat; }
+.hs-result-lost { background: #1a2130 url("../assets/harbor-jammed.webp") center / cover no-repeat; }
+
+/* ---- toast */
+.hs-toast { padding: 10px 16px; border-radius: 12px; background: var(--hs-panel); color: var(--hs-text); font-size: 14px; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+
+/* ---- motion: the key art and results illustration fade and rise in */
+@keyframes hs-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.hs-fade-in { animation: hs-fade-in .5s ease-out both; }

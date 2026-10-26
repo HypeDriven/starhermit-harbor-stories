@@ -1,9 +1,10 @@
-/* Harbor Stories — translation tables (see js/i18n.js).
+/* Harbor Stories — translation tables (see src/i18n.ts, which loads this
+ * classic script with loadClassic and reads globalThis.HS_STRINGS).
  * Each row: [English key, es-419, de-DE, fr-FR, pt-BR, it-IT]. en-GB, es-ES and
  * fr-CA list only where they differ from en-US, es-419 and fr-FR.
  * "Harbor Stories", "StarHermit" and "Brinemist Quay" are names and stay as
- * they are. The Settings → Graphics strings and the StarHermit account strings
- * live in js/settings.js.
+ * they are. Sound volumes, graphics, language and controls are the runtime's
+ * own Options menu, which the runtime translates.
  */
 (function (root) {
   'use strict';
@@ -17,7 +18,6 @@
     ['Sync error', 'Error de sincronización', 'Synchronisierungsfehler', 'Erreur de synchronisation', 'Erro de sincronização', 'Errore di sincronizzazione'],
     ['Offline', 'Sin conexión', 'Offline', 'Hors ligne', 'Offline', 'Offline'],
     ['Player', 'Jugador', 'Spieler', 'Joueur', 'Jogador', 'Giocatore'],
-    ['Player {id}', 'Jugador {id}', 'Spieler {id}', 'Joueur {id}', 'Jogador {id}', 'Giocatore {id}'],
     ['Harbor leaderboard', 'Clasificación del puerto', 'Hafen-Bestenliste', 'Classement du port', 'Placar do porto', 'Classifica del porto'],
     ['Merge tool chains, repair the coast, and reveal stories around Brinemist Quay.', 'Combina cadenas de herramientas, repara la costa y descubre historias en Brinemist Quay.', 'Kombiniere Werkzeugketten, repariere die Küste und entdecke Geschichten rund um Brinemist Quay.', 'Fusionnez des chaînes d’outils, réparez la côte et découvrez les histoires de Brinemist Quay.', 'Combine cadeias de ferramentas, conserte a costa e descubra histórias em Brinemist Quay.', 'Unisci catene di attrezzi, ripara la costa e scopri le storie di Brinemist Quay.'],
     ['Best score {score}', 'Mejor puntuación {score}', 'Bestwert {score}', 'Meilleur score {score}', 'Melhor pontuação {score}', 'Miglior punteggio {score}'],
@@ -115,7 +115,17 @@
     ['Half the Quay', 'Medio muelle', 'Der halbe Kai', 'La moitié du quai', 'Metade do cais', 'Metà della banchina'],
     ['Keeper of Brinemist', 'Guardián de Brinemist', 'Hüter von Brinemist', 'Gardien de Brinemist', 'Guardião de Brinemist', 'Custode di Brinemist'],
     ['Regular at the Quay', 'Habitual del muelle', 'Stammgast am Kai', 'Habitué du quai', 'Frequentador do cais', 'Habitué della banchina'],
-    ['Neighborhood Hero', 'Héroe del barrio', 'Held der Nachbarschaft', 'Héros du quartier', 'Herói do bairro', 'Eroe del quartiere']
+    ['Neighborhood Hero', 'Héroe del barrio', 'Held der Nachbarschaft', 'Héros du quartier', 'Herói do bairro', 'Eroe del quartiere'],
+    // ---- StarHermit account: sign-in, invite link, leaderboard posting
+    ['Sign in with StarHermit', 'Iniciar sesión con StarHermit', 'Mit StarHermit anmelden', 'Se connecter avec StarHermit', 'Entrar com StarHermit', 'Accedi con StarHermit'],
+    ['Invite a friend', 'Invitar a un amigo', 'Freund einladen', 'Inviter un ami', 'Convidar um amigo', 'Invita un amico'],
+    ['Invite link copied to clipboard.', 'Enlace de invitación copiado al portapapeles.', 'Einladungslink in die Zwischenablage kopiert.', 'Lien d’invitation copié dans le presse-papiers.', 'Link de convite copiado para a área de transferência.', 'Link di invito copiato negli appunti.'],
+    ['Could not copy the invite link: {link}', 'No se pudo copiar el enlace de invitación: {link}', 'Einladungslink konnte nicht kopiert werden: {link}', 'Impossible de copier le lien d’invitation : {link}', 'Não foi possível copiar o link de convite: {link}', 'Impossibile copiare il link di invito: {link}'],
+    ['Signed out of StarHermit. Progress keeps saving on this device.', 'Sesión de StarHermit cerrada. El progreso se sigue guardando en este dispositivo.', 'Von StarHermit abgemeldet. Der Fortschritt wird weiter auf diesem Gerät gespeichert.', 'Déconnecté de StarHermit. La progression reste enregistrée sur cet appareil.', 'Você saiu do StarHermit. O progresso continua salvo neste dispositivo.', 'Disconnesso da StarHermit. I progressi restano salvati su questo dispositivo.'],
+    ['Posting score to the leaderboard…', 'Publicando la puntuación en la clasificación…', 'Punktzahl wird in die Bestenliste eingetragen…', 'Envoi du score au classement…', 'Enviando pontuação para o placar…', 'Invio del punteggio alla classifica…'],
+    ['Leaderboard rank: #{rank}', 'Puesto en la clasificación: #{rank}', 'Platz in der Bestenliste: #{rank}', 'Rang au classement : #{rank}', 'Posição no placar: #{rank}', 'Posizione in classifica: #{rank}'],
+    ['Score posted to the leaderboard.', 'Puntuación publicada en la clasificación.', 'Punktzahl in die Bestenliste eingetragen.', 'Score envoyé au classement.', 'Pontuação enviada para o placar.', 'Punteggio inviato alla classifica.'],
+    ['Score not posted to the leaderboard.', 'No se pudo publicar la puntuación en la clasificación.', 'Punktzahl wurde nicht in die Bestenliste eingetragen.', 'Score non envoyé au classement.', 'A pontuação não foi enviada para o placar.', 'Punteggio non inviato alla classifica.']
   ];
 
   // Regional variants: only where they differ from en-US, es-419 and fr-FR.
@@ -134,12 +144,18 @@
     'This round is over — play again to continue.': 'Esta ronda ha terminado: vuelve a jugar para continuar.',
     'Choose a tool first.': 'Primero, elige una herramienta.',
     'Pier Lantern': 'Farol del embarcadero',
-    'Hang the pier lamp': 'Cuelga la lámpara del embarcadero'
+    'Hang the pier lamp': 'Cuelga la lámpara del embarcadero',
+    'Could not copy the invite link: {link}': 'No se ha podido copiar el enlace de invitación: {link}',
+    'Signed out of StarHermit. Progress keeps saving on this device.': 'Se ha cerrado la sesión de StarHermit. El progreso se sigue guardando en este dispositivo.',
+    'Score not posted to the leaderboard.': 'No se ha podido publicar la puntuación en la clasificación.'
   };
   var FR_CA = {
     'Score {score}': 'Pointage {score}',
     'Moves {moves} · Score {score}': 'Coups {moves} · Pointage {score}',
-    'Best score {score}': 'Meilleur pointage {score}'
+    'Best score {score}': 'Meilleur pointage {score}',
+    'Posting score to the leaderboard…': 'Envoi du pointage au classement…',
+    'Score posted to the leaderboard.': 'Pointage envoyé au classement.',
+    'Score not posted to the leaderboard.': 'Pointage non envoyé au classement.'
   };
 
   var T = { 'es-419': {}, 'de-DE': {}, 'fr-FR': {}, 'pt-BR': {}, 'it-IT': {} };

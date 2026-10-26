@@ -1,12 +1,31 @@
 name=Harbor Stories
 description=Merge matching tools and fulfill restoration jobs to bring a foggy harbor town back to life.
-launch=index.html
 owner=2712e04e-461b-4d23-81ae-e40b429128a8
 server=score-script.js
 version=1.0.0
 contentVersion=1
 cover=cover.jpg
+
+# StarHermit engine script game: one package, two runtimes. Browsers open
+# launch=index.html, the web loader `npm run package` writes (it pins the
+# engine on wiki.starhermit.com by hash; never edit it); the StarHermit client
+# plays engine.entry natively. Re-run `npm run package` after every change and
+# commit index.html + starhermit-files.json (spec.md §13).
+launch=index.html
+engine.api=1
+engine.entry=src/main.ts
+engine.version=1.13.1
+engine.minor=15
+engine.capabilities=platform,storage,clipboard
+
+# Keyboard and gamepad defaults (players rebind them in the runtime's Options).
+# The board itself is played with the pointer, touch, or Tab/arrows + Enter
+# (D-pad + South on a gamepad): every cell is a focusable button.
 control.deliver=KeyD | Deliver selected
 control.hint=KeyH | Hint
 control.restart=KeyR | Restart
 control.clear=Escape | Clear selection
+engine.gamepad.deliver=North
+engine.gamepad.hint=West
+engine.gamepad.restart=Start
+engine.gamepad.clear=East
