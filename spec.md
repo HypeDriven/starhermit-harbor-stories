@@ -2,7 +2,7 @@
 
 **Status:** running spec. Present tense describes what the build does today; anything the design
 calls for but the code does not yet do is collected in §17.
-**Repo version:** `starhermit.txt` `version=1.0.0`, `contentVersion=1`, engine 1.14.0 (host API 1.15),
+**Repo version:** `starhermit.txt` `version=1.0.0`, `contentVersion=1`, engine 1.14.0 (host API 1.16),
 `js/content.js` `CONTENT_VERSION = 1`, `js/rules.js` `STATE_VERSION = 1`.
 
 ## 1. Overview

@@ -37,7 +37,7 @@
     "sfx/tool-select.opus": {"sha256": "5ee8a0cd94fec3b53631ab11941c10ecad64ff0e8f904ef07ed0faa5c00a69b0", "size": 15884},
     "sfx/ui-start.opus": {"sha256": "fbec9e095e46823b9258251b6e0aadeec75653739ba4ec5e201a52decabddb27", "size": 13877},
     "sfx/win.opus": {"sha256": "cf857ae06896d80fe12cfcfafb067364a59c0cca192497829335ea8797d841bf", "size": 37829},
-    "spec.md": {"sha256": "5fdcecef92e522c5dab53b43244e9e8b93b56880791c8031f25c5efe64494fe9", "size": 39787},
+    "spec.md": {"sha256": "343b907efa66b195586bba1196e57da7689bf038788d1e317cc3253594b00a39", "size": 39787},
     "src/backdrop.ts": {"sha256": "e2db9ba4c61f2a0a71e26d45e2383dcc1279ecee731caa8c26f25d3a268c239e", "size": 19982},
     "src/game.ts": {"sha256": "a8fb0da132ec5dfb66a7344df9cde27f798343b7247f7a3f36a399c410797fd5", "size": 9685},
     "src/i18n.ts": {"sha256": "1c2f9243dae8127016a07ca03bfe0bff74663f2c8cb70db181ee64bdfed93cbf", "size": 2109},
