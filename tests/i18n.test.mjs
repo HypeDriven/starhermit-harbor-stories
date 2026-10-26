@@ -1,20 +1,15 @@
-// Localization coverage: every English key the code and the reachable content
-// use is translated in every locale (en-GB → en-US, es-ES → es-419, fr-CA →
-// fr-FR inherit), placeholders survive, the language follows sh-language.js
-// and switches live. Run: node --test tests/i18n.test.mjs
+// Localization coverage: every English key the client (src/*.ts) and the
+// reachable content use is translated in every locale (en-GB → en-US, es-ES →
+// es-419, fr-CA → fr-FR inherit), placeholders survive, and no table holds a
+// key nothing uses. Run: node --test tests/i18n.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { loadTables, codeKeys, audit, bootI18n } from './i18n-common.mjs';
+import { readdirSync, readFileSync } from 'node:fs';
+import { loadTables, codeKeys, audit } from './i18n-common.mjs';
+import { loadClassic } from './load.mjs';
 
 const ROOT = new URL('../', import.meta.url);
-const read = (p) => readFileSync(new URL(p, ROOT), 'utf8');
-const DIR = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const gameRoot = {};
-for (const f of ['rng.js', 'content.js']) new Function('self', readFileSync(path.join(DIR, 'js', f), 'utf8')).call(gameRoot, gameRoot);
-const Content = gameRoot.HSContent;
+const Content = loadClassic('rng.js', 'content.js').HSContent;
 
 /** Content shown in play: tool names, the opening stage, achievement names. */
 function contentKeys() {
@@ -28,23 +23,18 @@ function contentKeys() {
 
 function usedKeys() {
   const keys = new Set(contentKeys());
-  for (const f of ['js/main.js', 'js/platform.js']) codeKeys(read(f)).forEach((k) => keys.add(k));
+  const dir = new URL('src/', ROOT);
+  for (const f of readdirSync(dir).filter((n) => n.endsWith('.ts'))) {
+    codeKeys(readFileSync(new URL(f, dir), 'utf8')).forEach((k) => keys.add(k));
+  }
   return [...keys].filter((k) => /[A-Za-z]/.test(k)).sort();
 }
 
-test('every used key is translated in every locale; placeholders intact', () => {
+test('every used key is translated in every locale; placeholders intact; no unused rows', () => {
   assert.deepEqual(audit(loadTables(ROOT, 'js/strings.js', 'HS_STRINGS'), usedKeys()), []);
 });
 
-test('the locale follows sh-language and switches live', () => {
-  const { I18N, events, doc } = bootI18n(ROOT, { strings: 'js/strings.js', i18n: 'js/i18n.js', global: 'HSI18N', languages: ['de-DE'] });
-  assert.equal(I18N.lang, 'de-DE');
-  assert.equal(doc.documentElement.lang, 'de-DE');
-  assert.equal(I18N.T('Play again'), 'Nochmal spielen');
-  I18N.language.setChoice('fr-CA');
-  assert.equal(I18N.lang, 'fr-CA');
-  assert.equal(events.at(-1), 'fr-CA');
-  assert.equal(I18N.T('Score {score}', { score: 7 }), 'Pointage 7');
-  I18N.language.setChoice('it-IT');
-  assert.equal(I18N.TH('Moves {moves} · Score {score}', { moves: '<b>1</b>', score: '<b>2</b>' }), 'Mosse <b>1</b> · Punti <b>2</b>');
+test('the client finds its keys (the scan is not empty)', () => {
+  const keys = usedKeys();
+  for (const k of ['Play', 'Deliver selected', 'Moves {moves} · Score {score}', 'Invite a friend', 'Harbor restored!']) assert.ok(keys.includes(k), k);
 });

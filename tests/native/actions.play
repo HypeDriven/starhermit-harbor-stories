@@ -1,0 +1,34 @@
+# The task rail and the manifest's actions: Hint (H), a refused delivery with
+# its reason, Esc clears the selection, the Sound toggle, Restart (R and the
+# button), a refused merge (not touching) with its reason.
+until 300 Play
+frames 10
+click Play
+until 120 Restoration tasks
+key KeyH 2
+until 30 Hint: merge from row 1, column 2 to row 1, column 3.
+click Mallet
+until 30 Mallet selected
+key KeyD 2
+until 30 No task wants that tool right now.
+# the refused tool stays selected; Esc lets it go
+key Escape 2
+until 30 Selection cleared.
+# (a click while Esc is still held is not taken as one: let it go first)
+frames 5
+click Mallet
+until 30 Mallet selected
+click Twine
+until 30 Tools only merge on touching cells.
+click Sound: on
+until 30 Sound off.
+expect Sound: off
+click Sound: off
+until 30 Sound on.
+click Hint
+until 30 Hint: merge
+click Restart
+until 30 Merge two matching tools side by side
+key KeyR 2
+until 30 Merge two matching tools side by side
+expect Moves0

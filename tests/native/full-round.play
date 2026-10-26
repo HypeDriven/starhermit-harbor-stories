@@ -1,0 +1,98 @@
+# A whole round of Journey stage 1 to the results card, driving the real UI:
+# the pointer on the title, then the board by keyboard (a click focuses a
+# cell; arrows move from cell to cell, Enter plays it, D delivers), following
+# the rules engine's hint line (the stage is seeded, so the board is the same
+# every run). Then Play again starts a new round.
+until 300 Play
+frames 10
+click Play
+until 120 Restoration tasks
+frames 5
+# 1. merge row 1 column 2 into row 1 column 3 (two Candle Lamps)
+click Candle Lamp
+until 30 Candle Lamp selected
+key ArrowRight 2
+frames 2
+key Enter 2
+until 30 Merged into Pier Lantern
+# 2. deliver the Pier Lantern: the lamp task is done
+key Enter 2
+until 30 Pier Lantern selected
+key KeyD 2
+until 30 Hang the pier lamp complete!
+# 3. merge row 1 column 5 into row 2 column 5
+key ArrowRight 2
+frames 2
+key ArrowRight 2
+frames 2
+key Enter 2
+until 30 selected
+key ArrowDown 2
+frames 2
+key Enter 2
+until 30 Merged into Pier Lantern
+# 4. move the Mallet from row 2 column 2 to row 3 column 1
+key ArrowLeft 2
+frames 2
+key ArrowLeft 2
+frames 2
+key ArrowLeft 2
+frames 2
+key Enter 2
+until 30 Mallet selected
+key ArrowDown 2
+frames 2
+key ArrowLeft 2
+frames 2
+key Enter 2
+until 30 Tool moved.
+# 5. merge it with the Mallet below it
+key Enter 2
+until 30 Mallet selected
+key ArrowDown 2
+frames 2
+key Enter 2
+until 30 Merged into Claw Hammer
+# 6. move the Twine from row 3 column 5 to row 4 column 2
+key ArrowUp 2
+frames 2
+key ArrowRight 2
+frames 2
+key ArrowRight 2
+frames 2
+key ArrowRight 2
+frames 2
+key ArrowRight 2
+frames 2
+key Enter 2
+until 30 Twine selected
+key ArrowDown 2
+frames 2
+key ArrowLeft 2
+frames 2
+key ArrowLeft 2
+frames 2
+key ArrowLeft 2
+frames 2
+key Enter 2
+until 30 Tool moved.
+# 7. merge it with the Twine at row 5 column 1
+key Enter 2
+until 30 Twine selected
+key ArrowDown 2
+frames 2
+key ArrowLeft 2
+frames 2
+key Enter 2
+until 30 Merged into Rope Coil
+# 8. deliver the Rope Coil: every task is done
+key Enter 2
+until 30 Rope Coil selected
+key KeyD 2
+until 60 Harbor restored!
+until 200 Play again
+frames 150
+save results
+click Play again
+until 120 Restoration tasks
+expect Moves0

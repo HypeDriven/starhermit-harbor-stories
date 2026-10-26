@@ -1,0 +1,10 @@
+# Fingers: Play and two board taps (select, then merge), as a phone sends them.
+until 300 Play
+frames 10
+touch Play
+until 120 Restoration tasks
+frames 5
+touch Candle Lamp
+until 30 Candle Lamp selected
+touch Open water
+until 30 Tool moved.
