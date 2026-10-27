@@ -396,7 +396,10 @@ export function buildUi(dt: number): void {
   });
   // The sparks over the board, above the panels (a widget built after them draws over them).
   ui.place("fx", "top-start", () => {
-    ui.widget("", { role: "none", size: { width: width / v.s, height: height / v.s }, draw: () => drawSparks(dt, v.s) });
+    // No size: a placed widget takes the pointer over its rectangle (1.16), and
+    // its draw callback still paints the whole window, so the sparks cover
+    // the board without taking the clicks under them.
+    ui.widget("", { role: "none", size: { width: 0, height: 0 }, draw: () => drawSparks(dt, v.s) });
   });
   resultsCard(v);
   if (toastText && frame().time > toastUntil) toastText = null;
