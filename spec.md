@@ -2,7 +2,7 @@
 
 **Status:** running spec. Present tense describes what the build does today; anything the design
 calls for but the code does not yet do is collected in §17.
-**Repo version:** `starhermit.txt` `version=1.0.0`, `contentVersion=1`, engine 1.19.1 (host API 1.21),
+**Repo version:** `starhermit.txt` `version=1.0.0`, `contentVersion=1`, engine 1.22.0 (host API 1.21),
 `js/content.js` `CONTENT_VERSION = 1`, `js/rules.js` `STATE_VERSION = 1`.
 
 ## 1. Overview
@@ -15,7 +15,7 @@ restoration jobs that bring a fog-bound harbor town back to life.
 | Genre | Single-screen merge puzzler with an authored task list |
 | Players | 1, local, offline after first load |
 | Session | 60–150 s per stage (the shipped stage wins in 8 hint-optimal moves; human play 15–25) |
-| Platforms | StarHermit engine 1.19.1 script game: natively in the StarHermit client and in desktop and mobile browsers (the engine's web runtime), portrait and landscape |
+| Platforms | StarHermit engine 1.22.0 script game: natively in the StarHermit client and in desktop and mobile browsers (the engine's web runtime), portrait and landscape |
 | Rendering | `starhermit:ui` board (a grid of cell widgets with painted glyphs and text labels) over a painted harbor backdrop (`starhermit:canvas` + `starhermit:draw`) and spark layer, switched by the runtime's graphics tier. No 3D scene. |
 | Audio | `starhermit:audio` clips on the runtime's effects and interface buses, 14 authored Opus one-shots plus a looped ambience bed |
 
@@ -362,7 +362,7 @@ at the rail's width, measured titles, so a 30 % longer German string reflows ins
 
 **Manifest.** `starhermit.txt`: `name`, `description`, `owner`, `server=score-script.js` (the leaderboard
 script), `version`, `contentVersion`, `cover`, `launch=index.html` (the engine's loader), `engine.api=1`,
-`engine.entry=src/main.ts`, `engine.version=1.19.1`, `engine.minor=15`,
+`engine.entry=src/main.ts`, `engine.version=1.22.0`, `engine.minor=15`,
 `engine.capabilities=platform,storage,clipboard`, the four actions `control.deliver=KeyD`, `control.hint=KeyH`,
 `control.restart=KeyR`, `control.clear=Escape` and their gamepad defaults (`North`, `West`, `Start`, `East`).
 
@@ -400,7 +400,7 @@ achievements.
 
 **One package, two runtimes.** The TypeScript in `src/` runs natively in the engine's interpreter (the
 StarHermit client) and in browsers in a worker of the engine's web runtime, which `index.html` (the loader
-`starhermit package --web` writes, pinning engine 1.19.1 on wiki.starhermit.com by hash) starts. The pure game
+`starhermit package --web` writes, pinning engine 1.22.0 on wiki.starhermit.com by hash) starts. The pure game
 logic stays classic scripts in `js/`, loaded with `loadClassic` and tested by Node as they ship.
 
 | Path | Responsibility |
