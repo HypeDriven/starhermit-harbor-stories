@@ -16,7 +16,7 @@ import { player, requestSignIn } from "starhermit:platform";
 import { cellRects, drawSparks, quality } from "./backdrop.js";
 import * as game from "./game.js";
 import { T } from "./i18n.js";
-import { icon } from "./icons.js";
+import { EMOJI, icon } from "./icons.js";
 import { avatarCanvas, copyInvite, leaderboardRows } from "./online.js";
 import { syncStatus } from "./save.js";
 import { isMuted, toggleMute } from "./sfx.js";
@@ -306,7 +306,15 @@ function boardCell(r: number, c: number, size: number, names: boolean, vw: numbe
         let dy = 0;
         if (sel && q.detail === "detailed" && !state.reducedMotion) dy = -3 * s * (1 - Math.cos(frame().time * Math.PI * 2 / 1.6)) / 2;
         const ix = rect.x + (rect.width - iconPx) / 2, iy = y + dy;
-        if (g) {
+        const emoji = EMOJI[item.c];
+        if (emoji) {
+          if (q.bloom === "on" && item.c === "lantern" && !state.highContrast) {
+            const glow = icon("glow");
+            if (glow) draw.image(glow.image, ix - iconPx * 0.3, iy - iconPx * 0.3, iconPx * 1.6, iconPx * 1.6, { source: glow.source, tint: [1, 0.75, 0.35, 0.8] });
+          }
+          const es = iconPx;
+          draw.text(emoji, ix + iconPx / 2, iy + (iconPx - es * 1.2) / 2, { size: es, align: "center" });
+        } else if (g) {
           if (q.bloom === "on" && item.c === "lantern" && !state.highContrast) {
             const glow = icon("glow");
             if (glow) draw.image(glow.image, ix - iconPx * 0.3, iy - iconPx * 0.3, iconPx * 1.6, iconPx * 1.6, { source: glow.source, tint: [1, 0.75, 0.35, 0.8] });
