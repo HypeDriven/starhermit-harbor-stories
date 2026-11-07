@@ -15,7 +15,7 @@ import { bindingLabel } from "starhermit:input";
 import { player, requestSignIn } from "starhermit:platform";
 import { cellRects, drawSparks, quality } from "./backdrop.js";
 import * as game from "./game.js";
-import { T } from "./i18n.js";
+import { A, T } from "./i18n.js";
 import { EMOJI, icon } from "./icons.js";
 import { avatarCanvas, copyInvite, leaderboardRows } from "./online.js";
 import { syncStatus } from "./save.js";
@@ -23,21 +23,17 @@ import { isMuted, toggleMute } from "./sfx.js";
 import { applyVariants, tileClass } from "./style.js";
 
 // -- Toast --------------------------------------------------------------------------
-let toastText: string | null = null;
-let toastUntil = 0;
+let shownToast: ui.Toast | null = null;
 export function toast(text: string): void {
-  toastText = text;
-  toastUntil = frame().time + 3.5;
-  ui.announce(text);
+  // one at a time; the engine announces it; a press still reaches what is under it
+  shownToast?.dismiss();
+  shownToast = ui.toast!(text, { duration: 3.5, style: "hs-toast", dismissible: false });
 }
 
 // -- Helpers ------------------------------------------------------------------------
 interface View { w: number; h: number; narrow: boolean; short: boolean; s: number }
 function view(): View {
-  const { width, height, safeArea } = frame();
-  const s = ui.preferences().scale;
-  const w = (width - safeArea.left - safeArea.right) / s;
-  const h = (height - safeArea.top - safeArea.bottom) / s;
+  const { width: w, height: h, scale: s } = ui.viewport!();
   return { w, h, s, narrow: w <= 700, short: h <= 500 && w > h };
 }
 function clamp(v: number, a: number, b: number): number { return Math.max(a, Math.min(b, v)); }
@@ -148,8 +144,8 @@ function titleScreen(v: View): void {
       playerChip();
       const list: Btn[] = [{ id: "btn-start", text: T("Play"), act: game.startGame }];
       list.push({ id: "btn-settings", text: T("Settings"), secondary: true, act: openMenu });
-      if (player()) list.push({ id: "btn-invite", text: T("Invite a friend"), secondary: true, act: () => toast(copyInvite()) });
-      else list.push({ id: "btn-signin", text: T("Sign in with StarHermit"), secondary: true, act: signIn });
+      if (player()) list.push({ id: "btn-invite", text: A("invite"), secondary: true, act: () => toast(copyInvite()) });
+      else list.push({ id: "btn-signin", text: A("signIn"), secondary: true, act: signIn });
       buttons("title-actions", list, inner, 10, "center");
       leaderboard(Math.min(400, inner));
     }, { width, padding: { top: padV, bottom: padV, start: padH, end: padH }, spacing: v.short ? 6 : 14, align: "center" });
@@ -410,11 +406,4 @@ export function buildUi(dt: number): void {
     ui.widget("", { role: "none", size: { width: 0, height: 0 }, draw: () => drawSparks(dt, v.s) });
   });
   resultsCard(v);
-  if (toastText && frame().time > toastUntil) toastText = null;
-  if (toastText) {
-    const text = toastText;
-    ui.place("toast", { anchor: "bottom", y: 16 }, () => {
-      ui.style("hs-toast").paragraph(text, Math.min(v.w - 32, 560));
-    });
-  }
 }

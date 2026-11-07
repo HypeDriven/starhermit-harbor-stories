@@ -8,7 +8,7 @@ import * as ui from "starhermit:ui";
 import { onPlayerChange, onSessionEnded } from "starhermit:platform";
 import { drawBackdrop, setChainColors } from "./backdrop.js";
 import * as game from "./game.js";
-import { T } from "./i18n.js";
+import { A } from "./i18n.js";
 import { refresh } from "./online.js";
 import { initSave } from "./save.js";
 import { buildUi, toast } from "./screens.js";
@@ -25,7 +25,7 @@ onStart(() => {
 });
 
 onPlayerChange(() => refresh());
-onSessionEnded(() => toast(T("Signed out of StarHermit. Progress keeps saving on this device.")));
+onSessionEnded(() => toast(A("signedOut")));
 
 // The manifest's actions (players rebind them in the runtime's Options).
 onAction((e) => {

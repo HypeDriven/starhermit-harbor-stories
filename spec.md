@@ -270,7 +270,7 @@ ten from quantum to infinite); its quality tier (`frame().quality`) selects one 
 | Embers / sparks per burst / live-spark cap | 8 / 10 / 80 | 16 / 16 / 140 | 36 / 26 / 260 | 60 / 34 / 400 |
 
 Counts are tuned at each tier's slowest level and scale with the level's speed within the tier
-(`levelSettings().teraflops`, at most 4×; embers ≤ 160, sparks ≤ 60). Gameplay is identical on every tier.
+(`levelSettings().particles` over the tier's anchor level, at most 4×; embers ≤ 160, sparks ≤ 60). Gameplay is identical on every tier.
 
 **The backdrop** (`src/backdrop.ts`) paints a dusk sky with stars, a low sun on the horizon, a headland town
 with lit windows, a lighthouse whose beam sweeps and narrows as it turns, a sea with perspective wave lines
@@ -325,7 +325,7 @@ event cannot re-trigger within 50 ms. No music stems; the ambience bed is the mu
 Nine locales ship: **en-US, en-GB, es-419, es-ES, de-DE, fr-FR, fr-CA, pt-BR, it-IT**. Every string the player
 can see — title, player chip, leaderboard, header, task rail, buttons, status line (events, hints, rejected
 moves, achievements), tile names and accessible names, results card, toasts, the account strings — is an
-English key in `js/strings.js` with es-419, de-DE, fr-FR, pt-BR and it-IT translations; en-GB ("Harbour
+English key in `assets/strings.json` with es-419, de-DE, fr-FR, pt-BR and it-IT translations; en-GB ("Harbour
 restored!"), es-ES and fr-CA ("Pointage") carry only their differences. Content shown in play is translated by
 key too: all 24 tool names, stage 1's name, intro and task labels, and the ten achievement names; content with
 no UI entry point (stages 2–40, story scenes, challenges) stays English until it is reachable (§16). "Harbor
@@ -414,9 +414,9 @@ logic stays classic scripts in `js/`, loaded with `loadClassic` and tested by No
 | `src/save.ts` | The progress save, its migration and conflict merge, the sync state. |
 | `src/online.ts` | Avatar, leaderboard, score submission, invite link. |
 | `src/sfx.ts` | Clips, ambience, the Sound toggle. |
-| `src/i18n.ts` | Locale and `T()` over `js/strings.js`. |
+| `src/i18n.ts` | `T()` over the engine's string tables (`assets/strings.json`), `A()` for its account strings. |
 | `js/rng.js`, `js/content.js`, `js/rules.js` | Seeded PRNG, content, the pure rules engine (unchanged from the browser build). |
-| `js/progress.js`, `js/gfx.js`, `js/strings.js` | The progress document, the graphics tier model, the translation tables. |
+| `js/progress.js`, `js/gfx.js` | The progress document, the graphics tier model. |
 | `assets/ui-style.json` | The base styles, converted from `tools/ui-style.css` with `npm run css` (`starhermit css`). |
 | `score-script.js` | StarHermit platform script (`server=`): range-checks a finished run's score and posts it to `high-score`. |
 | `index.html`, `starhermit-files.json` | The web loader and the file index, written by `npm run package`; never edited. |

@@ -7,10 +7,10 @@
 import { OffscreenCanvas } from "starhermit:canvas";
 import { clipboard } from "starhermit:engine";
 import {
-  avatar, connectGame, inviteLink, leaderboards, player, profile, sessions,
+  avatar, inviteLink, leaderboards, player, profile,
   type Leaderboard,
 } from "starhermit:platform";
-import { T } from "./i18n.js";
+import { A, T } from "./i18n.js";
 
 export interface BoardRow { name: string; score: number; mine: boolean }
 
@@ -70,46 +70,14 @@ export async function refreshLeaderboard(): Promise<void> {
 /** Posts a finished run's score; resolves whether it was taken and the
  * player's rank on the board (null when not among the first 100). Never rejects. */
 export async function submitScore(total: number): Promise<{ posted: boolean; rank: number | null }> {
-  const me = player();
-  if (!me) return { posted: false, rank: null };
-  let accepted: string[] = [];
-  try {
-    const sessionId = await sessions.practice();
-    accepted = await new Promise<string[]>((resolve) => {
-      const socket = connectGame(sessionId);
-      let done = false;
-      const finish = (list: string[]): void => {
-        if (done) return;
-        done = true;
-        clearTimeout(timer);
-        socket.close();
-        resolve(list);
-      };
-      const timer = setTimeout(() => finish([]), 15000);
-      socket.on("open", () => { socket.sendCommand({ type: "result", scores: { "high-score": total } }); });
-      socket.on("game", (data) => {
-        const d = data as { type?: string; accepted?: string[] } | null;
-        if (d && d.type === "result-ack") finish(Array.isArray(d.accepted) ? d.accepted : []);
-      });
-      socket.on("error", () => finish([]));
-      socket.on("stopped", () => finish([]));
-      socket.on("abandoned", () => finish([]));
-    });
-  } catch { return { posted: false, rank: null }; }
-  if (!accepted.includes("high-score")) return { posted: false, rank: null };
-  void refreshLeaderboard();
-  try {
-    const b = await highScoreBoard();
-    if (!b) return { posted: true, rank: null };
-    const page = await leaderboards.entries(b.id, { pageSize: 100 });
-    const mine = page.items.find((e) => e.userId === me.userId);
-    return { posted: true, rank: mine ? mine.rank : null };
-  } catch { return { posted: true, rank: null }; }
+  const r = await leaderboards.submitScore("high-score", total);
+  if (r.accepted) void refreshLeaderboard();
+  return { posted: r.accepted, rank: r.rank };
 }
 
 /** Copies the invite link (call while handling the button's press); the toast text. */
 export function copyInvite(): string {
-  if (!link) return T("Could not copy the invite link: {link}", { link: "" });
-  try { clipboard.writeText(link); return T("Invite link copied to clipboard."); }
-  catch { return T("Could not copy the invite link: {link}", { link }); }
+  if (!link) return A("inviteFailed");
+  try { clipboard.writeText(link); return A("inviteCopied"); }
+  catch { return A("inviteLink", { link }); }
 }

@@ -1,0 +1,21 @@
+# Tier bench: a Journey round's board on the harbor backdrop, with a merge and a delivery's sparks in the bracket.
+# viewport 1280x800@1
+until 300 Play
+frames 10
+click Play
+until 120 Restoration tasks
+frames 120
+measure start
+click Candle Lamp
+until 30 Candle Lamp selected
+key ArrowRight 2
+frames 2
+key Enter 2
+until 30 Merged into Pier Lantern
+frames 60
+key Enter 2
+until 30 Pier Lantern selected
+key KeyD 2
+until 30 Hang the pier lamp complete!
+frames 400
+measure stop

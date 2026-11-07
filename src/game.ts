@@ -4,7 +4,7 @@
 // the actions; nothing here draws.
 import { announce } from "starhermit:ui";
 import { loadClassic } from "starhermit:script";
-import { T } from "./i18n.js";
+import { A, T } from "./i18n.js";
 import { events as fxEvents } from "./backdrop.js";
 import { persist, progress, Progress } from "./save.js";
 import { sfx, startAmbience } from "./sfx.js";
@@ -177,11 +177,11 @@ function apply(command: Record<string, unknown>): boolean {
 function postToLeaderboard(total: number): void {
   if (!signedIn()) { lbFn = null; return; }
   const mine = round;
-  lbFn = () => T("Posting score to the leaderboard…");
+  lbFn = () => A("leaderboardPosting");
   submitScore(total).then((r) => {
     if (round !== mine) return;
-    lbFn = () => (!r.posted ? T("Score not posted to the leaderboard.")
-      : r.rank ? T("Leaderboard rank: #{rank}", { rank: r.rank }) : T("Score posted to the leaderboard."));
+    lbFn = () => (!r.posted ? A("leaderboardNotPosted")
+      : r.rank ? A("leaderboardRank", { rank: r.rank }) : A("leaderboardPosted"));
   }, () => { /* never rejects */ });
 }
 

@@ -16,7 +16,7 @@
 //
 // The effects follow the runtime's graphics tier (js/gfx.js) and the player's
 // reduced motion (the backdrop drawn still, no particles).
-import { frame, levels, levelSettings, preferences, type GraphicsLevel } from "starhermit:engine";
+import { frame, levelSettings, preferences, type GraphicsLevel, type QualityTier } from "starhermit:engine";
 import { OffscreenCanvas } from "starhermit:canvas";
 import * as draw from "starhermit:draw";
 import { loadClassic } from "starhermit:script";
@@ -37,18 +37,19 @@ export interface Quality {
 }
 const Model = (globalThis as unknown as { HSGfxModel: { resolve(quality: string, k: number): Quality } }).HSGfxModel;
 
-/** The level's speed over the slowest level of its tier (budgets scale ≤ 4× within a tier). */
+/** The level each tier's budgets were tuned at. */
+const ANCHOR: Record<QualityTier, GraphicsLevel> = { low: "quantum", balanced: "molecular", high: "terrestrial", ultra: "galactic" };
+/** The level's particle budget over its tier's anchor (budgets scale ≤ 4× within a tier). */
 function tierScale(level: GraphicsLevel): number {
   const mine = levelSettings(level);
-  const floor = levels.map((l) => levelSettings(l)).find((s) => s.quality === mine.quality) ?? mine;
-  return floor.teraflops > 0 ? mine.teraflops / floor.teraflops : 1;
+  return mine.particles / levelSettings(ANCHOR[mine.quality]).particles;
 }
 let qKey = "";
 let q: Quality = Model.resolve("balanced", 1);
 /** The effects for this frame's graphics level. */
 export function quality(): Quality {
   const f = frame();
-  const key = `${f.quality}/${f.level}`;
+  const key = f.level;
   if (key !== qKey) { qKey = key; q = Model.resolve(f.quality, tierScale(f.level)); }
   return q;
 }

@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
-import { loadTables, codeKeys, audit } from './i18n-common.mjs';
+import { codeKeys, audit } from './i18n-common.mjs';
 import { loadClassic } from './load.mjs';
 
 const ROOT = new URL('../', import.meta.url);
@@ -31,10 +31,10 @@ function usedKeys() {
 }
 
 test('every used key is translated in every locale; placeholders intact; no unused rows', () => {
-  assert.deepEqual(audit(loadTables(ROOT, 'js/strings.js', 'HS_STRINGS'), usedKeys()), []);
+  assert.deepEqual(audit(JSON.parse(readFileSync(new URL('assets/strings.json', ROOT), 'utf8')), usedKeys()), []);
 });
 
 test('the client finds its keys (the scan is not empty)', () => {
   const keys = usedKeys();
-  for (const k of ['Play', 'Deliver selected', 'Moves {moves} · Score {score}', 'Invite a friend', 'Harbor restored!']) assert.ok(keys.includes(k), k);
+  for (const k of ['Play', 'Deliver selected', 'Moves {moves} · Score {score}', 'Sound: on', 'Harbor restored!']) assert.ok(keys.includes(k), k);
 });

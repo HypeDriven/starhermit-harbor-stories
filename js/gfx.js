@@ -1,8 +1,8 @@
 /* Harbor Stories — graphics quality model (pure: no canvas, no engine).
  * The runtime's Options › Graphics picks the level (Auto from the GPU, or one
  * of ten); its quality tier (`frame().quality`: low, balanced, high, ultra)
- * selects one row of effects here, and the level's speed within the tier
- * scales the particle counts (src/backdrop.ts). Gameplay is identical on every
+ * selects one row of effects here, and the level's particle budget within the
+ * tier scales the particle counts (src/backdrop.ts). Gameplay is identical on every
  * tier — only visuals change. UMD: globalThis.HSGfxModel and Node. */
 (function (root, factory) {
   var api = factory();
@@ -44,8 +44,8 @@
   };
   var EMBER_MAX = 160, SPARK_MAX = 60;
 
-  /** A tier's budget, its counts scaled by `k` (the level's speed over the
-   * tier's slowest level, at most 4×). */
+  /** A tier's budget, its counts scaled by `k` (the level's particle budget over
+   * the tier's anchor level, at most 4×). */
   function budgetFor(preset, k) {
     var b = Object.assign({}, BUDGETS[preset] || BUDGETS.balanced);
     var s = Math.max(1, Math.min(4, isFinite(k) ? Number(k) : 1));
