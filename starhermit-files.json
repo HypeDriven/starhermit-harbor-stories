@@ -40,7 +40,7 @@
     "spec.md": {"sha256": "12abc3c6b0005cad463839058aaf90a52fbd14bd51baa055e82771f524ebfea2", "size": 39836},
     "src/backdrop.ts": {"sha256": "132037e6c7ffc675f2fd9dd4bdf0d6b10ead9b271cc0f80e1f80c4f7d000ce5e", "size": 20061},
     "src/game.ts": {"sha256": "f477228e41b6039c8589df5c16bda876211cc603aa67132856b3d0408ed81d29", "size": 9630},
-    "src/i18n.ts": {"sha256": "b43cf70ce455c47339a30e3cab512d95114d6180a902ea3ebf8e01acfec0507f", "size": 990},
+    "src/i18n.ts": {"sha256": "44ca578af73043505aa40dd8264a0f73b8425931f4cd8d5ad067de26842bf82a", "size": 1312},
     "src/icons.ts": {"sha256": "2b397249af686419bc3fc3448ecee0c05e8ba54b4f29cf7c7baebc51c578ee9e", "size": 2796},
     "src/main.ts": {"sha256": "40fdb48a2496f4e7f7bc5442134321402deafe7db774ae1b29fc987c31eb8cd0", "size": 1603},
     "src/online.ts": {"sha256": "af21fe800603cd23581a76a65fa8b42924c46b2c5a943b8f3227ca7e14a5f293", "size": 3440},
