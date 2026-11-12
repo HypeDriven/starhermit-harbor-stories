@@ -1,3 +1,5 @@
+// localization-runtime:attached
+import { setLocalizedStyles as __l10nStyles } from "./l10n/font.js";
 // The look. The base (the browser build's flat style.css, the Low tier) is
 // assets/ui-style.json, converted once from tools/ui-style.css with
 // `starhermit css`. On top of it come the looks the browser build switched
@@ -27,12 +29,12 @@ export function initStyles(): void {
   });
   ui.setTokens(css.tokens);
   ui.setAnimations(css.animations);
-  ui.setStyles(css.styles);
+  __l10nStyles(css.styles);
   // The results card is a ui.dialog: the browser build's .hs-terminal backdrop
   // and .hs-terminal-card panel, its buttons full width with centred text.
   const card = css.styles[".hs-terminal-card"] ?? {};
   const dim = css.styles[".hs-terminal"] ?? {};
-  ui.setStyles({
+  __l10nStyles({
     dialog: { ...card, parts: { backdrop: { ...(dim.background !== undefined ? { background: dim.background } : {}) } } },
     ".hs-wide": { width: "fill", text: { align: "center" } },
   });
@@ -162,7 +164,7 @@ export function applyVariants(): void {
       for (const sel of [false, true]) styles[`.t-${chain}${master ? "-m" : ""}${sel ? "-sel" : ""}`] = tile(chain, master, sel);
     }
   }
-  ui.setStyles(styles);
+  __l10nStyles(styles);
 }
 
 /** The tile class for a cell. */

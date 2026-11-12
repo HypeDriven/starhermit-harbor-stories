@@ -1,3 +1,8 @@
+import { localizedStyle as __l10nStyle } from "./l10n/font.js";
+import { openLocalizedOptions as openMenu } from "./l10n/menu.js";
+import { localizedDrawOptions as __l10nDrawOptions } from "./l10n/font.js";
+// localization-runtime:attached
+import { openLocalizedOptions as __l10nOptions } from "./l10n/menu.js";
 // The two screens and the results card, built each frame with starhermit:ui
 // in the browser build's layout: the title (key art, name, tagline, best
 // score, player chip, Play / Settings / Invite / Sign in, the leaderboard)
@@ -8,7 +13,7 @@
 // board above the tasks with the tile names hidden; short landscape
 // (≤ 500 px tall) compacts everything so the board, tasks and actions stay
 // co-visible.
-import { frame, openMenu } from "starhermit:engine";
+import { frame } from "starhermit:engine";
 import * as draw from "starhermit:draw";
 import * as ui from "starhermit:ui";
 import { bindingLabel } from "starhermit:input";
@@ -78,10 +83,10 @@ function buttons(label: string, list: Btn[], width: number, spacing: number, jus
         if (kbd) {
           opts.content = () => ui.row(`${b.id}-face`, () => {
             ui.label(b.text);
-            ui.style("hs-kbd").label(kbd);
+            ui.style(__l10nStyle("hs-kbd")).label(kbd);
           }, { spacing: 6, align: "center" });
         }
-        if (ui.style(...style).id(b.id).button(b.text, opts)) b.act();
+        if (ui.style(...__l10nStyle(style)).id(b.id).button(b.text, opts)) b.act();
       }
     }, { spacing, justify, align: "center" }));
   }, { spacing, align: justify === "center" ? "center" : "start" });
@@ -131,15 +136,15 @@ function titleScreen(v: View): void {
   const top = Math.max(0, (v.h - titleHeight) / 2);
   ui.column("title-page", () => {
     if (top > 1) ui.widget("", { role: "none", size: { width: 1, height: top } });
-    const r = ui.style("hs-title-screen", "v-title-screen").column("title", () => {
+    const r = ui.style(__l10nStyle("hs-title-screen"), __l10nStyle("v-title-screen")).column("title", () => {
       ui.widget("", { role: "image", size: { width: Math.min(artW, artH * 1200 / 672 * 1.25), height: artH }, style: ["hs-key-art", "v-key-art", "hs-fade-in"] });
       // 56 px, clamp(38px, 12vw, 56px) on phones, and never wider than the page
       // (system fonts differ in width: measured, as labels do not wrap)
       let titleSize = v.short ? 32 : compact ? clamp(v.w * 0.12, 38, 56) : 56;
       const titleW = ui.measureText("Harbor Stories", { style: ["hs-title-name", { text: { size: titleSize } }] }).width / v.s;
       if (titleW > inner) titleSize = Math.max(20, titleSize * inner / titleW * 0.98);
-      ui.style("hs-title-name", "v-title", { text: { size: titleSize } }).label("Harbor Stories");
-      ui.style("hs-tagline").paragraph(T("Merge tool chains, repair the coast, and reveal stories around Brinemist Quay."), Math.min(inner, 42 * 18));
+      ui.style(__l10nStyle("hs-title-name"), __l10nStyle("v-title"), __l10nStyle({ text: { size: titleSize } })).label("Harbor Stories");
+      ui.style(__l10nStyle("hs-tagline")).paragraph(T("Merge tool chains, repair the coast, and reveal stories around Brinemist Quay."), Math.min(inner, 42 * 18));
       if (best) rich("best", T("Best score {score}"), { score: best }, ["hs-best"]);
       playerChip();
       const list: Btn[] = [{ id: "btn-start", text: T("Play"), act: game.startGame }];
@@ -157,12 +162,12 @@ function leaderboard(width: number): void {
   const rows = leaderboardRows();
   if (!rows || !rows.length) return;
   ui.column("lb", () => {
-    ui.style("hs-lb-title").heading(T("Harbor leaderboard"));
+    ui.style(__l10nStyle("hs-lb-title")).heading(T("Harbor leaderboard"));
     rows.forEach((e, i) => {
-      ui.style("hs-lb-row", e.mine && "hs-lb-row.mine").row(`lb-${i}`, () => {
+      ui.style(__l10nStyle("hs-lb-row"), __l10nStyle(e.mine && "hs-lb-row.mine")).row(`lb-${i}`, () => {
         ui.id(`lb-${i}-name`).label(`${i + 1}. ${e.name}`);
         ui.spacer();
-        ui.style("hs-lb-score").id(`lb-${i}-score`).label(String(e.score));
+        ui.style(__l10nStyle("hs-lb-score")).id(`lb-${i}-score`).label(String(e.score));
       }, { width, spacing: 12, align: "center" });
     });
   }, { spacing: 6, align: "center" });
@@ -173,11 +178,11 @@ function header(v: View, width: number): void {
   const st = game.state!;
   const tools = (): void => { ui.row("header-tools", () => {
     rich("score", T("Moves {moves} · Score {score}"), { moves: st.moves, score: st.score.total }, ["hs-score", "v-chip"]);
-    if (ui.style("hs-btn", "hs-btn.secondary", "hs-btn-small", "v-btn-secondary").id("btn-settings").button(T("Settings"))) openMenu();
+    if (ui.style(__l10nStyle("hs-btn"), __l10nStyle("hs-btn.secondary"), __l10nStyle("hs-btn-small"), __l10nStyle("v-btn-secondary")).id("btn-settings").button(T("Settings"))) __l10nOptions();
   }, { spacing: 8, align: "center" }); };
   const titles = (): void => { ui.column("header-titles", () => {
-    ui.style("hs-header-title", "v-title", "v-on-scene", v.short && { text: { size: 16 } }).label("Harbor Stories");
-    if (st.cfg.name) ui.style("hs-header-sub", "v-on-scene").label(T(st.cfg.name));
+    ui.style(__l10nStyle("hs-header-title"), __l10nStyle("v-title"), __l10nStyle("v-on-scene"), __l10nStyle(v.short && { text: { size: 16 } })).label("Harbor Stories");
+    if (st.cfg.name) ui.style(__l10nStyle("hs-header-sub"), __l10nStyle("v-on-scene")).label(T(st.cfg.name));
   }, { spacing: 2 }); };
   if (v.narrow) {
     ui.column("header", () => {
@@ -200,9 +205,9 @@ function tasks(width: number, v: View): void {
   ui.column("tasks", () => {
     st.tasks.forEach((task, i) => {
       const reqs = task.reqs.map((req, k) => `${game.itemLabel(req.chain, req.tier)} ${task.got[k]}/${req.count}`).join(" · ");
-      ui.style("hs-task", "v-task", task.done && "hs-task.done", task.done && "v-task-done").column(`task-${i}`, () => {
-        ui.style("hs-task-name", v.short && { text: { size: 13 } }).id(`task-${i}-name`).paragraph(T(task.label), width - 26);
-        ui.style("hs-task-reqs", v.short && { text: { size: 12 } }).id(`task-${i}-reqs`).paragraph(reqs, width - 26);
+      ui.style(__l10nStyle("hs-task"), __l10nStyle("v-task"), __l10nStyle(task.done && "hs-task.done"), __l10nStyle(task.done && "v-task-done")).column(`task-${i}`, () => {
+        ui.style(__l10nStyle("hs-task-name"), __l10nStyle(v.short && { text: { size: 13 } })).id(`task-${i}-name`).paragraph(T(task.label), width - 26);
+        ui.style(__l10nStyle("hs-task-reqs"), __l10nStyle(v.short && { text: { size: 12 } })).id(`task-${i}-reqs`).paragraph(reqs, width - 26);
       }, { width, padding: v.short ? { top: 5, bottom: 5, start: 8, end: 8 } : 10, spacing: v.short ? 2 : 4 });
     });
   }, { spacing: v.short ? 4 : 10 });
@@ -237,8 +242,8 @@ function keyLabel(label: string): string {
 
 function aside(width: number, v: View): void {
   const pad = v.short ? 8 : 16;
-  ui.style("hs-panel", "v-panel").column("aside", () => {
-    ui.style("hs-panel-title", v.short && { text: { size: 16 } }).heading(T("Restoration tasks"));
+  ui.style(__l10nStyle("hs-panel"), __l10nStyle("v-panel")).column("aside", () => {
+    ui.style(__l10nStyle("hs-panel-title"), __l10nStyle(v.short && { text: { size: 16 } })).heading(T("Restoration tasks"));
     tasks(width - pad * 2, v);
     actions(width - pad * 2, v);
   }, { width, padding: pad, spacing: v.short ? 6 : 16 });
@@ -255,10 +260,10 @@ function boardPanel(width: number, v: View, boardMax: number): void {
   const boardW = Math.max(120, Math.min(inner, boardMax));
   const cell = Math.max(24, (boardW - bpad * 2 - gap * (cols - 1)) / cols);
   const names = !(v.narrow || v.short);
-  ui.style("hs-panel", "v-panel").column("board-wrap", () => {
-    ui.style("hs-status", v.short && { text: { size: 13 } }).id("status").paragraph(game.status(), inner);
+  ui.style(__l10nStyle("hs-panel"), __l10nStyle("v-panel")).column("board-wrap", () => {
+    ui.style(__l10nStyle("hs-status"), __l10nStyle(v.short && { text: { size: 13 } })).id("status").paragraph(game.status(), inner);
     ui.column("board-center", () => {
-      ui.style("hs-board", "v-board").grid("board", () => {
+      ui.style(__l10nStyle("hs-board"), __l10nStyle("v-board")).grid("board", () => {
         cellRects.clear();
         for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) boardCell(r, c, cell, names, vw);
       }, { columns: Array.from({ length: cols }, () => cell), gap, padding: bpad });
@@ -289,7 +294,7 @@ function boardCell(r: number, c: number, size: number, names: boolean, vw: numbe
       let nameH = 0;
       if (names) {
         for (let i = 0; i < 6; i++) {
-          nameH = draw.measureText(name, { size: nameSize, maxWidth: nameMax }).height;
+          nameH = draw.measureText(name, __l10nDrawOptions({ size: nameSize, maxWidth: nameMax })).height;
           if (nameH <= room || nameSize <= 9 * s * textScale) break;
           nameSize = Math.max(9 * s * textScale, nameSize * 0.9);
         }
@@ -309,7 +314,7 @@ function boardCell(r: number, c: number, size: number, names: boolean, vw: numbe
             if (glow) draw.image(glow.image, ix - iconPx * 0.3, iy - iconPx * 0.3, iconPx * 1.6, iconPx * 1.6, { source: glow.source, tint: [1, 0.75, 0.35, 0.8] });
           }
           const es = iconPx;
-          draw.text(emoji, ix + iconPx / 2, iy + (iconPx - es * 1.2) / 2, { size: es, align: "center" });
+          draw.text(emoji, ix + iconPx / 2, iy + (iconPx - es * 1.2) / 2, __l10nDrawOptions({ size: es, align: "center" }));
         } else if (g) {
           if (q.bloom === "on" && item.c === "lantern" && !state.highContrast) {
             const glow = icon("glow");
@@ -321,17 +326,17 @@ function boardCell(r: number, c: number, size: number, names: boolean, vw: numbe
         // the tier badge: the persistent tier distinction, visible even when names are hidden
         const badge = String(item.t + 1);
         const bs = (names ? 11 : 10) * s * textScale;
-        const tw = draw.measureText(badge, { size: bs, weight: "700" }).width;
+        const tw = draw.measureText(badge, __l10nDrawOptions({ size: bs, weight: "700" })).width;
         const bh = bs + (names ? 4 : 2) * s, bw = Math.max(tw + (names ? 10 : 8) * s, bh);
         const bx = ix + iconPx - bw + iconPx * 0.12, by = iy + iconPx - bh + iconPx * 0.08;
         draw.box(bx, by, bw, bh, ["hs-tier", "v-tier"]);
-        draw.text(badge, bx + bw / 2, by + (bh - bs * 1.2) / 2, { size: bs, weight: "700", color: state.highContrast ? state.colors.text : "#111a29", align: "center" });
+        draw.text(badge, bx + bw / 2, by + (bh - bs * 1.2) / 2, __l10nDrawOptions({ size: bs, weight: "700", color: state.highContrast ? state.colors.text : "#111a29", align: "center" }));
         y += iconPx;
       } else {
-        draw.text("·", rect.x + rect.width / 2, y, { size: nameSize * 1.4, color, align: "center" });
+        draw.text("·", rect.x + rect.width / 2, y, __l10nDrawOptions({ size: nameSize * 1.4, color, align: "center" }));
         y += nameSize * 1.4;
       }
-      if (names) draw.text(name, rect.x + rect.width / 2, y + 4 * s, { size: nameSize, color, align: "center", maxWidth: nameMax });
+      if (names) draw.text(name, rect.x + rect.width / 2, y + 4 * s, __l10nDrawOptions({ size: nameSize, color, align: "center", maxWidth: nameMax }));
     },
   });
   if (res.activated) game.chooseCell(r, c);
@@ -378,11 +383,11 @@ function resultsCard(v: View): void {
   ui.dialog(term.won ? T("Harbor restored!") : T("Round over"), "", true, () => {
     ui.column("results-body", () => {
       ui.widget("", { role: "image", size: { width: inner, height: Math.min(inner * 400 / 640, v.h * 0.34) }, style: ["hs-result-art", term.won ? "hs-result-won" : "hs-result-lost", "hs-fade-in"] });
-      ui.style("hs-terminal-title", "hs-wide").heading(term.won ? T("Harbor restored!") : T("Round over"));
-      ui.style("hs-terminal-score", "hs-wide").label(T("Score {score}", { score: st.score.total }));
-      if (best) ui.style("hs-best", "hs-wide").label(T("Best {best}", { best }));
-      if (lb) ui.style("hs-lb-line").id("lb-line").paragraph(lb, inner);
-      if (ui.style("hs-btn", "v-btn", "hs-wide").id("btn-again").button(T("Play again"))) game.startGame();
+      ui.style(__l10nStyle("hs-terminal-title"), __l10nStyle("hs-wide")).heading(term.won ? T("Harbor restored!") : T("Round over"));
+      ui.style(__l10nStyle("hs-terminal-score"), __l10nStyle("hs-wide")).label(T("Score {score}", { score: st.score.total }));
+      if (best) ui.style(__l10nStyle("hs-best"), __l10nStyle("hs-wide")).label(T("Best {best}", { best }));
+      if (lb) ui.style(__l10nStyle("hs-lb-line")).id("lb-line").paragraph(lb, inner);
+      if (ui.style(__l10nStyle("hs-btn"), __l10nStyle("v-btn"), __l10nStyle("hs-wide")).id("btn-again").button(T("Play again"))) game.startGame();
     }, { width: inner, spacing: 8, align: "stretch" });
   });
 }

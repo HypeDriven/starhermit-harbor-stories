@@ -29,3 +29,7 @@ engine.gamepad.deliver=North
 engine.gamepad.hint=West
 engine.gamepad.restart=Start
 engine.gamepad.clear=East
+
+# Game language (saved per player); Automatic follows the account/device.
+control.localization=F2 | Language
+engine.group.localization=Interface

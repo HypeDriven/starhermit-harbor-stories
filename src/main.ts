@@ -1,3 +1,4 @@
+import { withLanguageRender as __l10nRender } from "./l10n/menu.js";
 // Harbor Stories on the StarHermit engine: the entry module (starhermit.txt
 // engine.entry), natively in the StarHermit client and in browsers on the
 // engine's web runtime. Merge matching tools on the dock, deliver what the
@@ -42,6 +43,10 @@ onUpdate((delta) => {
   dt = delta;
   buildUi(dt);
 });
-onRender(() => {
+onRender(__l10nRender(() => {
   drawBackdrop(dt);
-});
+}));
+
+// localization-runtime:menu
+import { installLanguageMenu as __installLanguageMenu } from "./l10n/menu.js";
+__installLanguageMenu(false);
