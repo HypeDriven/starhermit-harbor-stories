@@ -12,7 +12,7 @@
     "metadataSource": "starhermit.txt",
     "createdAt": "2026-09-01T07:01:01.266857+00:00",
     "coverArtSource": "manifest",
-    "coverArtUpdatedAt": "2026-11-26T20:40:47.183061+00:00",
+    "coverArtUpdatedAt": "2026-11-27T17:06:44.585682+00:00",
     "submittedByUserId": "2712e04e-461b-4d23-81ae-e40b429128a8",
     "submittedByUsername": "starhermit",
     "hosting": {
@@ -22,9 +22,9 @@
       "pinnedCommitSha": null,
       "deployedCommitSha": null,
       "deployError": null,
-      "deployedAt": "2026-11-26T20:40:47.17112+00:00",
+      "deployedAt": "2026-11-27T17:06:44.574418+00:00",
       "externalLaunchUrl": null,
-      "engineVersion": "1.51.0",
+      "engineVersion": "1.53.0",
       "deployWarning": null
     },
     "description": "Merge matching tools and fulfill restoration jobs to bring a foggy harbor town back to life.",
@@ -36,19 +36,19 @@
     "links": [],
     "isDisabled": false
   },
-  "publishedAt": "2026-11-26T20:40:47.377Z",
-  "sourceCommit": "1c235da93a56d87bc233001245c8578ef650d79e",
-  "bytesReceived": 3586713,
-  "archiveSha256": "c411cf5f1646a835063576b3004ca093fe79ffd783bfe49b927d64ba4d6307f4",
+  "publishedAt": "2026-11-27T17:06:44.750Z",
+  "sourceCommit": "07dab7e2bcd6f850485d6c7fb1985568be2bdf3c",
+  "bytesReceived": 3586651,
+  "archiveSha256": "65c5e7b778a27780384ab813896c1c868b6a5d64e0216efb5f09ac5a30ef3e15",
   "indexSha256": "104fc22ca88408999ccb4f6e6a92889eae38f1fb7de6ace69c581b88d3d1d64e",
   "result": {
     "clientPublished": true,
     "serverImageLoaded": false,
     "imageDigest": null,
-    "bytesReceived": 3586713,
+    "bytesReceived": 3586651,
     "mode": "replace",
     "filesRemoved": 0,
-    "engineVersion": "1.51.0",
+    "engineVersion": "1.53.0",
     "deployWarning": null
   },
   "liveVerification": {
